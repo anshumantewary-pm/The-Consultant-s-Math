@@ -53,5 +53,5 @@ class TestBottomUp:
             bottom_up([])
 
     def test_rejects_negative(self) -> None:
-        with pytest.raises(ValidationError, match="Bad.count"):
+        with pytest.raises(ValidationError, match=r"Bad\.count"):
             bottom_up([SizingSegment("Bad", -1, 1, 1)])

@@ -35,9 +35,7 @@ class TestProfitStatement:
         assert st.profit_margin == 0
         assert st.profit == -100
 
-    @pytest.mark.parametrize(
-        "field", ["price", "units", "variable_cost_per_unit", "fixed_costs"]
-    )
+    @pytest.mark.parametrize("field", ["price", "units", "variable_cost_per_unit", "fixed_costs"])
     def test_rejects_negative_inputs(self, field: str) -> None:
         kwargs = {"price": 10.0, "units": 1.0, "variable_cost_per_unit": 1.0, "fixed_costs": 1.0}
         kwargs[field] = -1.0

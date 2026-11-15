@@ -71,18 +71,18 @@ def share_table(revenues: Mapping[str, float]) -> ShareTable:
     so the leader's value is above 1 and everyone else's is below or equal to 1.
     """
     require_non_empty("revenues", revenues)
-    clean = {name: require_non_negative(f"revenues[{name!r}]", rev) for name, rev in revenues.items()}
+    clean = {
+        name: require_non_negative(f"revenues[{name!r}]", rev) for name, rev in revenues.items()
+    }
     total = sum(clean.values())
     if total == 0:
         raise ValidationError("revenues must not all be zero")
     ordered = sorted(clean.items(), key=lambda item: item[1], reverse=True)
 
+    runner_up = ordered[1][1] if len(ordered) > 1 else 0.0
     rows = []
     for index, (name, revenue) in enumerate(ordered):
-        if index == 0:
-            rival = ordered[1][1] if len(ordered) > 1 else 0.0
-        else:
-            rival = ordered[0][1]
+        rival = ordered[0][1] if index else runner_up
         rows.append(
             ShareRow(
                 name=name,
@@ -163,5 +163,5 @@ def project_share(
         years=span,
         company_revenue=company,
         market_size=market,
-        share=tuple(c / m for c, m in zip(company, market)),
+        share=tuple(c / m for c, m in zip(company, market, strict=True)),
     )

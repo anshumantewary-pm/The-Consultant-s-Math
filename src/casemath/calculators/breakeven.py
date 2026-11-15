@@ -72,9 +72,7 @@ def payback_period(investment: float, cash_flow_per_period: float) -> float:
     investment = require_non_negative("investment", investment)
     cash_flow_per_period = require_number("cash_flow_per_period", cash_flow_per_period)
     if cash_flow_per_period <= 0:
-        raise ValidationError(
-            "cash_flow_per_period must be > 0; the investment is never paid back"
-        )
+        raise ValidationError("cash_flow_per_period must be > 0; the investment is never paid back")
     return investment / cash_flow_per_period
 
 
