@@ -18,7 +18,7 @@ class Solution(Result):
     steps: tuple[Step, ...]
     findings: tuple[str, ...]
     recommendation: str
-    answer: dict[str, float] = field(default_factory=dict)
+    answer: dict[str, float | None] = field(default_factory=dict)  # None = "never"
 
 
 class Case(ABC):
