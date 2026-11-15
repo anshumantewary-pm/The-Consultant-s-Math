@@ -10,6 +10,19 @@ from casemath.calculators.breakeven import (
     payback_period,
     units_for_target_profit,
 )
+from casemath.calculators.growth import cagr, grow, rule_of_72
+from casemath.calculators.market_share import (
+    Concentration,
+    ShareProjection,
+    ShareRow,
+    ShareTable,
+    hhi,
+    market_share,
+    project_share,
+    relative_market_share,
+    required_share,
+    share_table,
+)
 from casemath.calculators.profitability import (
     ProfitBridge,
     ProfitStatement,
@@ -23,19 +36,32 @@ from casemath.calculators.profitability import (
 
 __all__ = [
     "BreakEvenAnalysis",
+    "Concentration",
     "ProfitBridge",
     "ProfitStatement",
     "Segment",
     "SegmentLine",
     "SegmentReport",
+    "ShareProjection",
+    "ShareRow",
+    "ShareTable",
     "break_even_analysis",
     "break_even_price",
     "break_even_revenue",
     "break_even_units",
+    "cagr",
+    "grow",
+    "hhi",
     "margin_of_safety",
+    "market_share",
     "payback_period",
     "profit_bridge",
     "profit_statement",
+    "project_share",
+    "relative_market_share",
+    "required_share",
+    "rule_of_72",
     "segment_profitability",
+    "share_table",
     "units_for_target_profit",
 ]
