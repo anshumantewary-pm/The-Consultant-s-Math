@@ -1,6 +1,6 @@
 # casemath
 
-[![CI](https://github.com/anshumantewary-pm/case-math/actions/workflows/ci.yml/badge.svg)](https://github.com/anshumantewary-pm/case-math/actions/workflows/ci.yml)
+[![CI](https://github.com/anshumantewary-pm/The-Consultant-s-Math/actions/workflows/ci.yml/badge.svg)](https://github.com/anshumantewary-pm/The-Consultant-s-Math/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%20to%203.13-blue)
 ![Coverage](https://img.shields.io/badge/coverage-%E2%89%A595%25-brightgreen)
 ![Dependencies](https://img.shields.io/badge/runtime%20deps-0-brightgreen)
@@ -18,8 +18,8 @@ Margin of safety   37.5%
 ## Install
 
 ```bash
-git clone https://github.com/anshumantewary-pm/case-math.git
-cd case-math
+git clone https://github.com/anshumantewary-pm/The-Consultant-s-Math.git
+cd The-Consultant-s-Math
 pip install -e ".[dev]"     # or: pip install .   (no dev tools)
 ```
 
