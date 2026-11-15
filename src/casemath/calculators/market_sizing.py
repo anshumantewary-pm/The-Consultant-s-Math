@@ -31,22 +31,30 @@ def top_down(
     filters: Sequence[tuple[str, float]],
     units_per_customer: float,
     price_per_unit: float,
+    customer_label: str = "people",
+    unit_label: str = "units",
 ) -> MarketSize:
-    """Narrow a starting population by each ``(label, fraction)`` filter in turn."""
+    """Narrow a starting population by each ``(label, fraction)`` filter in turn.
+
+    ``customer_label`` and ``unit_label`` only change how the steps read
+    (e.g. "EVs" and "sessions").
+    """
     population = require_non_negative("population", population)
     units_per_customer = require_non_negative("units_per_customer", units_per_customer)
     price_per_unit = require_non_negative("price_per_unit", price_per_unit)
 
-    steps = [Step("Starting population", population, "people")]
+    steps = [Step("Starting population", population, customer_label)]
     customers = population
     for label, fraction in filters:
         customers *= require_fraction(f"filter {label!r}", fraction)
-        steps.append(Step(f"x {fraction:.0%} {label}", customers, "people"))
+        steps.append(Step(f"x {fraction:.0%} {label}", customers, customer_label))
 
     units = customers * units_per_customer
     value = units * price_per_unit
-    steps.append(Step(f"x {units_per_customer:g} units per customer per year", units, "units"))
-    steps.append(Step(f"x {price_per_unit:g} per unit", value, "$"))
+    steps.append(
+        Step(f"x {units_per_customer:g} {unit_label} per customer per year", units, unit_label)
+    )
+    steps.append(Step(f"x {price_per_unit:g} per {unit_label.rstrip('s')}", value, "$"))
     return MarketSize(
         steps=tuple(steps), customers=customers, units_per_year=units, value_per_year=value
     )
