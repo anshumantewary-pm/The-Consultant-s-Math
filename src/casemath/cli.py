@@ -7,6 +7,7 @@ print and the data to emit with ``--json``. Handlers never print; ``main`` does.
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import sys
 from collections.abc import Callable, Sequence
@@ -229,7 +230,17 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def ensure_utf8(stream: object) -> None:
+    """Windows pipes default to cp1252, which cannot print the tree's box characters."""
+    if isinstance(stream, io.TextIOWrapper) and (stream.encoding or "").lower() not in (
+        "utf-8",
+        "utf8",
+    ):
+        stream.reconfigure(encoding="utf-8")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
+    ensure_utf8(sys.stdout)
     args = build_parser().parse_args(argv)
     try:
         output: Output = args.handler(args)

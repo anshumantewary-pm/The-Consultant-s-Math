@@ -212,3 +212,25 @@ def test_python_dash_m() -> None:
         check=True,
     )
     assert "Brewline" in result.stdout
+
+
+def test_ensure_utf8_reconfigures_legacy_encodings() -> None:
+    import io
+
+    from casemath.cli import ensure_utf8
+
+    stream = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+    ensure_utf8(stream)
+    assert stream.encoding == "utf-8"
+    ensure_utf8(object())  # non-text streams are left alone
+
+
+def test_tree_survives_a_cp1252_pipe() -> None:
+    env = {**__import__("os").environ, "PYTHONIOENCODING": "cp1252"}
+    result = subprocess.run(
+        [sys.executable, "-m", "casemath", "tree"],
+        capture_output=True,
+        check=True,
+        env=env,
+    )
+    assert "├──".encode() in result.stdout
