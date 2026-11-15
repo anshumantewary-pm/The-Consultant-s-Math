@@ -23,6 +23,7 @@ from casemath.calculators.market_share import (
     required_share,
     share_table,
 )
+from casemath.calculators.market_sizing import MarketSize, SizingSegment, bottom_up, top_down
 from casemath.calculators.profitability import (
     ProfitBridge,
     ProfitStatement,
@@ -37,6 +38,7 @@ from casemath.calculators.profitability import (
 __all__ = [
     "BreakEvenAnalysis",
     "Concentration",
+    "MarketSize",
     "ProfitBridge",
     "ProfitStatement",
     "Segment",
@@ -45,6 +47,8 @@ __all__ = [
     "ShareProjection",
     "ShareRow",
     "ShareTable",
+    "SizingSegment",
+    "bottom_up",
     "break_even_analysis",
     "break_even_price",
     "break_even_revenue",
@@ -63,5 +67,6 @@ __all__ = [
     "rule_of_72",
     "segment_profitability",
     "share_table",
+    "top_down",
     "units_for_target_profit",
 ]
