@@ -6,6 +6,7 @@ from casemath.calculators import (
     break_even_revenue,
     break_even_units,
     margin_of_safety,
+    operating_leverage,
     payback_period,
     units_for_target_profit,
 )
@@ -90,3 +91,19 @@ class TestAnalysis:
         assert a.break_even_units_whole == 334
         assert a.expected_units is None
         assert a.margin_of_safety is None
+
+
+class TestOperatingLeverage:
+    def test_dol(self) -> None:
+        # Contribution 160,000, profit 60,000: DOL 2.67
+        assert operating_leverage(10, 40_000, 6, 100_000) == pytest.approx(160 / 60)
+
+    def test_predicts_profit_sensitivity(self) -> None:
+        dol = operating_leverage(10, 40_000, 6, 100_000)
+        base = 40_000 * 4 - 100_000
+        bumped = 40_400 * 4 - 100_000
+        assert (bumped - base) / base == pytest.approx(dol * 0.01)
+
+    def test_below_break_even(self) -> None:
+        with pytest.raises(ValidationError, match="above break-even"):
+            operating_leverage(10, 20_000, 6, 100_000)

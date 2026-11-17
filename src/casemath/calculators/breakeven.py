@@ -112,3 +112,23 @@ def break_even_analysis(
         expected_units=None if expected_units is None else float(expected_units),
         margin_of_safety=safety,
     )
+
+
+def operating_leverage(
+    price: float, units: float, variable_cost_per_unit: float, fixed_costs: float
+) -> float:
+    """Degree of operating leverage: contribution / profit.
+
+    A DOL of 4 means a 1% change in volume moves profit by about 4%. High fixed
+    costs mean high leverage: bigger upside and a sharper fall below plan.
+    """
+    units = require_positive("units", units)
+    fixed_costs = require_non_negative("fixed_costs", fixed_costs)
+    contribution = units * _unit_margin(price, variable_cost_per_unit)
+    profit = contribution - fixed_costs
+    if profit <= 0:
+        raise ValidationError(
+            "operating leverage is only meaningful above break-even; "
+            f"profit at {units:g} units is {profit:,.2f}"
+        )
+    return contribution / profit

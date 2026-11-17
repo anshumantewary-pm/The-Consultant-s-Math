@@ -7,6 +7,7 @@ from casemath.calculators.breakeven import (
     break_even_revenue,
     break_even_units,
     margin_of_safety,
+    operating_leverage,
     payback_period,
     units_for_target_profit,
 )
@@ -58,6 +59,7 @@ __all__ = [
     "hhi",
     "margin_of_safety",
     "market_share",
+    "operating_leverage",
     "payback_period",
     "profit_bridge",
     "profit_statement",
