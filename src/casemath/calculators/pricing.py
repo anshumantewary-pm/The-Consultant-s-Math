@@ -6,7 +6,10 @@ negative: -2 means a 1% price rise loses 2% of volume.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from casemath.core.errors import ValidationError
+from casemath.core.result import Result
 from casemath.core.validate import (
     require_fraction,
     require_non_negative,
@@ -60,3 +63,70 @@ def volume_after_price_change(units: float, price_change: float, elasticity: flo
     if change <= -1:
         raise ValidationError("price_change must be above -100%")
     return float(units * (1 + change) ** elasticity)
+
+
+def markup_price(unit_cost: float, elasticity: float) -> float:
+    """Profit-maximising price under constant elasticity (the Lerner rule).
+
+    P* = c x e / (1 + e). Only defined for elastic demand (e < -1); with
+    inelastic demand raising price always raises profit, so there is no optimum.
+    """
+    cost = require_positive("unit_cost", unit_cost)
+    e = require_number("elasticity", elasticity)
+    if e >= -1:
+        raise ValidationError(
+            f"elasticity must be below -1 for an optimal price, got {e:g}; with inelastic "
+            "demand every price rise increases profit"
+        )
+    return cost * e / (1 + e)
+
+
+@dataclass(frozen=True)
+class PriceOptimum(Result):
+    intercept: float  # units demanded at a price of zero
+    slope: float  # units lost per $1 of price
+    unit_cost: float
+    price: float
+    units: float
+    contribution: float
+    choke_price: float  # price at which demand reaches zero
+
+
+def optimal_price_linear(
+    price_a: float, units_a: float, price_b: float, units_b: float, unit_cost: float
+) -> PriceOptimum:
+    """Fit straight-line demand Q = a - bP through two points and maximise (P - c) x Q.
+
+    Setting the derivative to zero gives P* = (a / b + c) / 2: halfway between
+    unit cost and the choke price.
+    """
+    pa = require_non_negative("price_a", price_a)
+    qa = require_non_negative("units_a", units_a)
+    pb = require_non_negative("price_b", price_b)
+    qb = require_non_negative("units_b", units_b)
+    cost = require_non_negative("unit_cost", unit_cost)
+    if pa == pb:
+        raise ValidationError("price_a and price_b must differ to fit a demand curve")
+    slope = -(qb - qa) / (pb - pa)
+    if slope <= 0:
+        raise ValidationError(
+            "demand must fall as price rises (units_b vs units_a looks flat or upward)"
+        )
+    intercept = qa + slope * pa
+    choke = intercept / slope
+    if cost >= choke:
+        raise ValidationError(
+            f"unit_cost ({cost:g}) is at or above the choke price ({choke:.2f}); "
+            "no price earns a positive margin"
+        )
+    price = (choke + cost) / 2
+    units = intercept - slope * price
+    return PriceOptimum(
+        intercept=intercept,
+        slope=slope,
+        unit_cost=cost,
+        price=price,
+        units=units,
+        contribution=(price - cost) * units,
+        choke_price=choke,
+    )
