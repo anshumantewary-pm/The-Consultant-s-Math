@@ -104,7 +104,34 @@ Two uses that come up constantly:
 | HHI | Σ (share in %)² | Concentration: below 1,000 fragmented, 1,000–1,800 moderate, above 1,800 high |
 | Projected share | Share × ((1 + g_company) / (1 + g_market))ⁿ | You gain share only by outgrowing the market |
 
-## 4. Presenting the answer
+## 4. Pricing: will a price change pay for itself?
+
+A price rise gains margin on every unit you keep and loses the margin on every unit that leaves. The break-even question is how many you can lose.
+
+```
+Arc elasticity          = (ΔQ / avg Q) / (ΔP / avg P)          midpoints, so direction does not matter
+Break-even volume change = −ΔP% / (CM% + ΔP%)                    e.g. −15% / (75% + 15%) = −16.7%
+Expected volume change   = elasticity × ΔP%                      linear; fine for moderate moves
+Profit-maximising price  = VC × e / (1 + e)                      constant elasticity, needs e < −1
+```
+
+- **High-margin businesses can afford to lose a lot of volume** on a rise, and must gain a lot on a cut. At a 30% margin a 10% cut needs 50% more volume.
+- **Always split elasticity by segment.** An average of an elastic and an inelastic group can make a rise look neutral when the right answer is to raise the price for one group only. Case 3 uses this.
+- **Do not extrapolate far beyond the tested price.** Roll out in stages and watch churn.
+
+## 5. M&A synergies: is the premium justified?
+
+```
+Premium              = Offer value − Standalone value
+Synergy value        = Run-rate profit synergies × multiple − one-off integration costs
+Walk-away price      = Standalone value + (risked) synergy value
+```
+
+- **Count revenue synergies at their profit margin**, and haircut them: cost synergies are in management's control, cross-selling is not.
+- **Phase synergies in** (30% / 70% / 100% is typical) and check when cumulative synergies cover integration costs.
+- **If cost synergies alone cover the premium, the deal is robust.** If not, close the gap with price or an earn-out. Case 4 uses this.
+
+## 6. Presenting the answer
 
 Use the pyramid: answer first, then support.
 

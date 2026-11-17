@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Owner | Anshuman Tewary |
-| Status | v0.1 shipped |
-| Last updated | 2026-11-15 |
+| Status | v0.2 shipped |
+| Last updated | 2026-11-17 |
 
 ## 1. Problem
 
@@ -22,7 +22,7 @@ A small, dependency-free Python library and CLI that:
 
 1. Does the standard case calculations correctly and explains each step.
 2. Builds a profitability issue tree and checks whether a structure is MECE.
-3. Ships two fully solved practice cases that use the calculators end to end.
+3. Ships fully solved practice cases that use the calculators end to end (two in v0.1, four in v0.2).
 4. Is tested and checked by CI on every push, so the numbers can be trusted.
 
 ### Non-goals
@@ -47,6 +47,9 @@ A small, dependency-free Python library and CLI that:
 - **US-4** As an analyst, I compute market share, relative market share, market concentration (HHI) and the share needed to hit a revenue target.
 - **US-5** As an analyst, I size a market top-down or bottom-up.
 - **US-6** As a candidate, I print the standard profitability tree and run a MECE check on a tree with numbers.
+- **US-9** As a candidate, I enter a price change and an elasticity (or a test result) and see whether it pays off and how much volume I can afford to lose.
+- **US-10** As an analyst, I value a list of cost and revenue synergies, phase them in, and compare their value with the premium being paid.
+- **US-11** As a learner, I get random practice questions, type answers the way I would say them ("$1.2M", "25%"), and am told if I am right and why.
 - **US-7** As a learner, I list the practice cases, read the prompt and print the full solution with steps and a recommendation.
 - **US-8** As any user, I get a clear error (not a crash or a silent wrong answer) when inputs make no sense, such as price below unit cost in a break-even.
 
@@ -64,6 +67,10 @@ A small, dependency-free Python library and CLI that:
 | FR-8 | MECE checker: flags single-child splits, duplicate sibling labels, and parts that do not reconcile to a stated total | US-6 |
 | FR-9 | Case registry with two solved cases; each solution has ordered steps and a recommendation | US-7 |
 | FR-10 | CLI `casemath` with subcommands `profit`, `bridge`, `breakeven`, `share`, `hhi`, `size`, `tree`, `case`; every command supports `--json` | All |
+| FR-12 | Pricing: arc elasticity, break-even volume change, price-change impact under a linear elasticity, constant-elasticity markup rule | US-9 |
+| FR-13 | Synergies: cost and revenue items with margin and probability haircut, phase-in schedule with integration costs and payback year, value at a multiple, premium % | US-10 |
+| FR-14 | Cases 3 (pricing) and 4 (M&A synergy) in the registry, same rules as FR-9 | US-7 |
+| FR-15 | `casemath drill`: seeded questions across seven topics, answer parsing (`$`, `K/M/B`, `%`, `x`), tolerance check, `--reveal` and `--json` answer keys; CLI adds `price` and `synergy` | US-11 |
 | FR-11 | All invalid inputs raise `casemath.ValidationError` (a `ValueError`); the CLI turns these into a one-line message and exit code 2 | US-8 |
 
 ## 6. Non-functional requirements
@@ -80,7 +87,7 @@ A small, dependency-free Python library and CLI that:
 
 ## 7. Success metrics
 
-- Both practice cases produce the documented answers in CI on every push.
+- All practice cases produce the documented answers in CI on every push.
 - CI green on all 12 matrix cells (3 OS × 4 Python versions).
 - A new calculator can be added by touching one module, its tests and one CLI handler, without editing any other calculator.
 
@@ -88,8 +95,8 @@ A small, dependency-free Python library and CLI that:
 
 | Version | Scope |
 |---|---|
-| **v0.1** (this release) | FR-1 to FR-11, two cases, CI, docs |
-| v0.2 | More cases (pricing, M&A synergy), `casemath drill` mode that generates random practice questions and checks answers |
+| v0.1 | FR-1 to FR-11, two cases, CI, docs |
+| **v0.2** (this release) | Pricing and synergy calculators, Case 3 (pricing), Case 4 (M&A synergy), `casemath drill`, CLI `price` and `synergy` (FR-12 to FR-15) |
 | v0.3 | Optional small web front end built on the `--json` output |
 
 ## 9. Risks

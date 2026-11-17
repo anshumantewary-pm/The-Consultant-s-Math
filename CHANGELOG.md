@@ -2,6 +2,20 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.2.0] - 2026-11-17
+
+### Added
+
+- Pricing calculators: arc (midpoint) price elasticity, break-even volume change for a price move, price-change impact under a linear elasticity, profit-maximising price for constant-elasticity demand.
+- M&A synergy calculators: `SynergyItem` (cost or revenue, margin, probability haircut), `synergy_schedule` with phase-in, integration costs and payback year, `synergy_value`, `acquisition_premium`.
+- Practice cases: Case 3 LedgerLite (pricing and segmentation), Case 4 Northfield Foods / Crestline Snacks (M&A synergies vs premium).
+- `casemath drill`: random practice questions across profit, break-even, share, sizing, growth, pricing and synergy topics. Seeded for repeatability, forgiving answer parsing, `--reveal` / `--json` answer keys.
+- CLI `price` and `synergy` commands.
+
+### Changed
+
+- CI solves all four cases in the job summary.
+
 ## [0.1.0] - 2026-11-15
 
 ### Added
