@@ -11,6 +11,18 @@ from casemath.calculators.breakeven import (
     payback_period,
     units_for_target_profit,
 )
+from casemath.calculators.finance import (
+    InvestmentAppraisal,
+    annuity_pv,
+    discount_factor,
+    discounted_payback,
+    investment_appraisal,
+    irr,
+    npv,
+    perpetuity,
+    present_value,
+    simple_payback,
+)
 from casemath.calculators.growth import cagr, grow, rule_of_72
 from casemath.calculators.market_share import (
     Concentration,
@@ -25,6 +37,14 @@ from casemath.calculators.market_share import (
     share_table,
 )
 from casemath.calculators.market_sizing import MarketSize, SizingSegment, bottom_up, top_down
+from casemath.calculators.pricing import (
+    PriceOptimum,
+    arc_elasticity,
+    breakeven_volume_change,
+    markup_price,
+    optimal_price_linear,
+    volume_after_price_change,
+)
 from casemath.calculators.profitability import (
     ProfitBridge,
     ProfitStatement,
@@ -35,11 +55,20 @@ from casemath.calculators.profitability import (
     profit_statement,
     segment_profitability,
 )
+from casemath.calculators.unit_economics import (
+    UnitEconomics,
+    cac_payback,
+    customer_lifetime,
+    lifetime_value,
+    unit_economics,
+)
 
 __all__ = [
     "BreakEvenAnalysis",
     "Concentration",
+    "InvestmentAppraisal",
     "MarketSize",
+    "PriceOptimum",
     "ProfitBridge",
     "ProfitStatement",
     "Segment",
@@ -49,18 +78,34 @@ __all__ = [
     "ShareRow",
     "ShareTable",
     "SizingSegment",
+    "UnitEconomics",
+    "annuity_pv",
+    "arc_elasticity",
     "bottom_up",
     "break_even_analysis",
     "break_even_price",
     "break_even_revenue",
     "break_even_units",
+    "breakeven_volume_change",
+    "cac_payback",
     "cagr",
+    "customer_lifetime",
+    "discount_factor",
+    "discounted_payback",
     "grow",
     "hhi",
+    "investment_appraisal",
+    "irr",
+    "lifetime_value",
     "margin_of_safety",
     "market_share",
+    "markup_price",
+    "npv",
     "operating_leverage",
+    "optimal_price_linear",
     "payback_period",
+    "perpetuity",
+    "present_value",
     "profit_bridge",
     "profit_statement",
     "project_share",
@@ -69,6 +114,9 @@ __all__ = [
     "rule_of_72",
     "segment_profitability",
     "share_table",
+    "simple_payback",
     "top_down",
+    "unit_economics",
     "units_for_target_profit",
+    "volume_after_price_change",
 ]
