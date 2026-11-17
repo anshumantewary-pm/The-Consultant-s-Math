@@ -24,6 +24,13 @@ from casemath.calculators.market_share import (
     share_table,
 )
 from casemath.calculators.market_sizing import MarketSize, SizingSegment, bottom_up, top_down
+from casemath.calculators.pricing import (
+    PriceChange,
+    break_even_volume_change,
+    price_change_impact,
+    price_elasticity,
+    profit_maximising_price,
+)
 from casemath.calculators.profitability import (
     ProfitBridge,
     ProfitStatement,
@@ -34,11 +41,20 @@ from casemath.calculators.profitability import (
     profit_statement,
     segment_profitability,
 )
+from casemath.calculators.synergy import (
+    SynergyItem,
+    SynergySchedule,
+    SynergyYear,
+    acquisition_premium,
+    synergy_schedule,
+    synergy_value,
+)
 
 __all__ = [
     "BreakEvenAnalysis",
     "Concentration",
     "MarketSize",
+    "PriceChange",
     "ProfitBridge",
     "ProfitStatement",
     "Segment",
@@ -48,18 +64,26 @@ __all__ = [
     "ShareRow",
     "ShareTable",
     "SizingSegment",
+    "SynergyItem",
+    "SynergySchedule",
+    "SynergyYear",
+    "acquisition_premium",
     "bottom_up",
     "break_even_analysis",
     "break_even_price",
     "break_even_revenue",
     "break_even_units",
+    "break_even_volume_change",
     "cagr",
     "grow",
     "hhi",
     "margin_of_safety",
     "market_share",
     "payback_period",
+    "price_change_impact",
+    "price_elasticity",
     "profit_bridge",
+    "profit_maximising_price",
     "profit_statement",
     "project_share",
     "relative_market_share",
@@ -67,6 +91,8 @@ __all__ = [
     "rule_of_72",
     "segment_profitability",
     "share_table",
+    "synergy_schedule",
+    "synergy_value",
     "top_down",
     "units_for_target_profit",
 ]
