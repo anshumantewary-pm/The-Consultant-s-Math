@@ -47,3 +47,31 @@ class TestInvest:
         data = json.loads(out)
         assert data["accept"] is True
         assert data["irr"] == pytest.approx(0.2)
+
+
+class TestUnitEcon:
+    ARGS = ("unit-econ", "--revenue", "100", "--margin", "0.8", "--churn", "0.04")
+
+    def test_healthy(self, capsys: Capture) -> None:
+        code, out, _ = run(capsys, *self.ARGS, "--cac", "600")
+        assert code == 0
+        assert "Lifetime value     $2,000.00" in out
+        assert "LTV / CAC          3.33x" in out
+        assert "Verdict            healthy" in out
+
+    def test_unhealthy_reasons(self, capsys: Capture) -> None:
+        _, out, _ = run(
+            capsys, "unit-econ", "--revenue", "10", "--margin", "0.5", "--churn", "0.5",
+            "--cac", "50",
+        )  # fmt: skip
+        assert "LTV/CAC below 3x; CAC not repaid" in out
+
+    def test_json(self, capsys: Capture) -> None:
+        data = run_json(capsys, *self.ARGS, "--cac", "1000", "--discount-rate", "0.01")
+        assert data["healthy"] is False
+        assert data["ltv"] == pytest.approx(1_616)
+
+    def test_validation(self, capsys: Capture) -> None:
+        code, _, err = run(capsys, *self.ARGS[:-2], "--churn", "0", "--cac", "1")
+        assert code == 2
+        assert "lasts forever" in err

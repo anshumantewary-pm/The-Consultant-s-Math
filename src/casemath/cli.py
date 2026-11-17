@@ -25,6 +25,7 @@ from casemath.calculators import (
     relative_market_share,
     share_table,
     top_down,
+    unit_economics,
     units_for_target_profit,
 )
 from casemath.cases import get_case, list_cases, render_case, render_solution
@@ -190,6 +191,25 @@ def _invest(args: argparse.Namespace) -> Output:
     return Output("\n".join(lines), {**a.to_dict(), "accept": a.accept})
 
 
+def _unit_econ(args: argparse.Namespace) -> Output:
+    ue = unit_economics(args.revenue, args.margin, args.churn, args.cac, args.discount_rate)
+    verdict = "healthy" if ue.healthy else "unhealthy"
+    reasons = []
+    if ue.ltv_to_cac < 3:
+        reasons.append("LTV/CAC below 3x")
+    if not ue.payback_within_lifetime:
+        reasons.append("CAC not repaid before the average customer churns")
+    lines = [
+        f"Customer lifetime  {fmt_number(ue.lifetime_periods, 1)} periods",
+        f"Lifetime value     {fmt_money(ue.ltv)}",
+        f"CAC                {fmt_money(ue.cac)}",
+        f"LTV / CAC          {ue.ltv_to_cac:.2f}x",
+        f"CAC payback        {fmt_number(ue.cac_payback_periods, 1)} periods",
+        f"Verdict            {verdict}" + (f" ({'; '.join(reasons)})" if reasons else ""),
+    ]
+    return Output("\n".join(lines), {**ue.to_dict(), "healthy": ue.healthy})
+
+
 # ---------------------------------------------------------------- parser
 
 
@@ -248,6 +268,13 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="FLOW",
         help="period 0 first (usually negative); put -- before flows like -1e6",
     )
+
+    p = add("unit-econ", _unit_econ, "customer lifetime value, LTV/CAC and CAC payback")
+    p.add_argument("--revenue", type=float, required=True, help="revenue per customer per period")
+    p.add_argument("--margin", type=float, required=True, help="gross margin as a fraction")
+    p.add_argument("--churn", type=float, required=True, help="customers lost per period, 0..1")
+    p.add_argument("--cac", type=float, required=True, help="cost to acquire one customer")
+    p.add_argument("--discount-rate", type=float, default=0.0, help="per period (default 0)")
 
     p = add("tree", _tree, "the profitability issue tree, with a MECE check")
     p.add_argument("--price", type=float)
