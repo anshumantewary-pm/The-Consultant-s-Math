@@ -1,12 +1,17 @@
+import json
+
 import pytest
 
 from casemath.calculators.finance import (
     annuity_pv,
     discount_factor,
+    discounted_payback,
+    investment_appraisal,
     irr,
     npv,
     perpetuity,
     present_value,
+    simple_payback,
 )
 from casemath.core import ValidationError
 
@@ -91,3 +96,40 @@ class TestIrr:
         # NPV is positive at every rate above -99%: lend 1, get 1 back, plus 1 today.
         with pytest.raises(ValidationError, match="no IRR"):
             irr([1, -1, 1.0001])
+
+
+class TestPayback:
+    def test_simple(self) -> None:
+        # -1000, +400, +400, +400: 2 years leaves -200, half of year 3 covers it.
+        assert simple_payback([-1_000, 400, 400, 400]) == pytest.approx(2.5)
+
+    def test_discounted_is_later(self) -> None:
+        flows = [-1_000, 400, 400, 400, 400]
+        assert discounted_payback(0.10, flows) == pytest.approx(3.0193, abs=1e-4)
+        assert discounted_payback(0.10, flows) > simple_payback(flows)  # type: ignore[operator]
+
+    def test_never(self) -> None:
+        assert simple_payback([-1_000, 100, 100]) is None
+        assert discounted_payback(0.1, [-1_000, 100, 100]) is None
+
+    def test_no_outlay_pays_back_immediately(self) -> None:
+        assert simple_payback([0, 10]) == 0
+
+
+class TestInvestmentAppraisal:
+    def test_good_project(self) -> None:
+        a = investment_appraisal(0.10, [-1_000, 500, 500, 500])
+        assert a.npv == pytest.approx(243.426, abs=1e-3)
+        assert a.irr == pytest.approx(0.23375, abs=1e-5)
+        assert a.profitability_index == pytest.approx(1.243426, abs=1e-6)
+        assert a.simple_payback == pytest.approx(2.0)
+        assert a.accept
+
+    def test_no_irr_and_no_index(self) -> None:
+        a = investment_appraisal(0.10, [100, 50])
+        assert a.irr is None
+        assert a.profitability_index is None
+        assert a.accept
+
+    def test_serialisable(self) -> None:
+        assert json.loads(json.dumps(investment_appraisal(0.1, [-1, 2]).to_dict()))["npv"] > 0
