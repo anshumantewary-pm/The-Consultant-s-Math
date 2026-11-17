@@ -59,3 +59,20 @@ def require_rate(name: str, value: object) -> float:
 def require_non_empty(name: str, values: Sized) -> None:
     if len(values) == 0:
         raise ValidationError(f"{name} must not be empty")
+
+
+def require_count(name: str, value: object, minimum: int = 1) -> int:
+    """A whole number of things (periods, simulation runs, steps), at least ``minimum``."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValidationError(f"{name} must be a whole number, got {value!r}")
+    if value < minimum:
+        raise ValidationError(f"{name} must be >= {minimum}, got {value}")
+    return value
+
+
+def require_numbers(name: str, values: object) -> tuple[float, ...]:
+    """A non-empty sequence of finite numbers, returned as a tuple of floats."""
+    if isinstance(values, (str, bytes)) or not isinstance(values, (list, tuple)):
+        raise ValidationError(f"{name} must be a list of numbers, got {type(values).__name__}")
+    require_non_empty(name, values)
+    return tuple(_as_number(f"{name}[{i}]", v) for i, v in enumerate(values))

@@ -13,6 +13,7 @@ from casemath.core import (
     fmt_signed_money,
 )
 from casemath.core import validate as v
+from casemath.core.validate import require_count, require_numbers
 
 
 class TestValidate:
@@ -104,3 +105,27 @@ def test_step_is_json_serialisable() -> None:
 def test_unknown_case_error_message() -> None:
     assert str(UnknownCaseError("no case 'x'")) == "no case 'x'"
     assert str(UnknownCaseError()) == "unknown case"
+
+
+class TestRequireCount:
+    def test_accepts_whole_numbers(self) -> None:
+        assert require_count("runs", 5) == 5
+        assert require_count("periods", 0, minimum=0) == 0
+
+    @pytest.mark.parametrize("bad", [0, -3, 2.5, True, "4"])
+    def test_rejects(self, bad: object) -> None:
+        with pytest.raises(ValidationError, match="runs"):
+            require_count("runs", bad)
+
+
+class TestRequireNumbers:
+    def test_returns_floats(self) -> None:
+        assert require_numbers("flows", [1, 2.5]) == (1.0, 2.5)
+
+    @pytest.mark.parametrize(
+        ("bad", "message"),
+        [([], "must not be empty"), ("12", "list of numbers"), ([1, "x"], r"flows\[1\]")],
+    )
+    def test_rejects(self, bad: object, message: str) -> None:
+        with pytest.raises(ValidationError, match=message):
+            require_numbers("flows", bad)
