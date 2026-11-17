@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "casemath"
-version = "0.2.0"
+version = "0.3.0"
 description = "Consulting case math toolkit: profitability, break-even, market share, market sizing, pricing, M&A synergies and MECE issue trees."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,7 +30,7 @@ casemath = "casemath.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-casemath = ["py.typed"]
+casemath = ["py.typed", "web/index.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

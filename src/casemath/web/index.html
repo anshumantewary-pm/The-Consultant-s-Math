@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>casemath</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --text: #1c1c1a; --muted: #66665f;
+    --line: #dcdcd6; --accent: #2f5bd3; --accent-text: #ffffff;
+    --good: #1f7a3d; --bad: #b42318; --code: #f0f0ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151514; --panel: #1f1f1d; --text: #ececea; --muted: #a3a39b;
+      --line: #34342f; --accent: #7a9cff; --accent-text: #0d0d0c;
+      --good: #5fcf86; --bad: #ff8a7a; --code: #262624;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header, main { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+  header { display: flex; align-items: baseline; gap: 12px; padding-top: 24px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0; }
+  header p { margin: 0; color: var(--muted); }
+  nav { display: flex; gap: 4px; margin: 20px 0 16px; border-bottom: 1px solid var(--line); }
+  nav button {
+    background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted);
+    padding: 8px 12px; font: inherit; cursor: pointer;
+  }
+  nav button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .list button {
+    display: block; width: 100%; text-align: left; background: none; border: 0;
+    padding: 8px 10px; border-radius: 6px; color: var(--text); font: inherit; cursor: pointer;
+  }
+  .list button:hover { background: var(--code); }
+  .list button[aria-current="true"] { background: var(--accent); color: var(--accent-text); }
+  .list small { display: block; opacity: .75; }
+  label { display: block; margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+  input, select, textarea {
+    display: block; width: 100%; margin-top: 4px; padding: 7px 9px; font: inherit;
+    color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
+  }
+  label.check { display: flex; align-items: center; gap: 8px; }
+  label.check input { width: auto; margin: 0; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0 12px; }
+  button.primary {
+    background: var(--accent); color: var(--accent-text); border: 0; border-radius: 6px;
+    padding: 8px 16px; font: inherit; cursor: pointer;
+  }
+  pre {
+    background: var(--code); border-radius: 6px; padding: 12px; overflow-x: auto;
+    font: 13px/1.45 ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: pre-wrap;
+    margin: 12px 0 0;
+  }
+  .error { color: var(--bad); }
+  .good { color: var(--good); }
+  .muted { color: var(--muted); }
+  h2 { font-size: 17px; margin: 0 0 4px; }
+  .q { border-top: 1px solid var(--line); padding: 12px 0; }
+  .q:first-child { border-top: 0; padding-top: 0; }
+  .q form { display: flex; gap: 8px; margin-top: 6px; }
+  .q input { margin: 0; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>casemath</h1>
+  <p>Consulting case math, checked.</p>
+  <p id="version" class="muted"></p>
+</header>
+<main>
+  <nav role="tablist">
+    <button role="tab" data-tab="calc" aria-selected="true">Calculators</button>
+    <button role="tab" data-tab="cases" aria-selected="false">Practice cases</button>
+    <button role="tab" data-tab="drill" aria-selected="false">Drill</button>
+  </nav>
+
+  <section id="tab-calc" class="grid">
+    <div class="panel list" id="calc-list"></div>
+    <div class="panel">
+      <h2 id="calc-title"></h2>
+      <p id="calc-help" class="muted"></p>
+      <form id="calc-form"><div class="row" id="calc-fields"></div>
+        <button class="primary" type="submit">Calculate</button></form>
+      <pre id="calc-out" hidden></pre>
+    </div>
+  </section>
+
+  <section id="tab-cases" class="grid" hidden>
+    <div class="panel list" id="case-list"></div>
+    <div class="panel">
+      <h2 id="case-title">Pick a case</h2>
+      <pre id="case-prompt" hidden></pre>
+      <p><button class="primary" id="case-solve" hidden>Show the solution</button></p>
+      <pre id="case-out" hidden></pre>
+    </div>
+  </section>
+
+  <section id="tab-drill" hidden>
+    <div class="panel">
+      <form id="drill-form" class="row">
+        <label>Topic <select name="topic" id="drill-topic"><option value="">Mixed</option></select></label>
+        <label>Questions <input name="count" type="number" min="1" max="20" value="5"></label>
+        <label>Seed (optional) <input name="seed" type="number" placeholder="random"></label>
+        <label>&nbsp;<button class="primary" type="submit">New drill</button></label>
+      </form>
+      <p class="muted">Answer the way you would say it: <code>$1.2M</code>, <code>41,667</code>, <code>25%</code>, <code>1.5x</code>.</p>
+      <p id="drill-score" class="muted"></p>
+      <div id="drill-questions"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const CALCS = {
+  profit: { title: "Profit statement", help: "One-period P&L from unit economics.",
+    fields: [["price", "Price"], ["units", "Units"], ["variable_cost", "Variable cost / unit"],
+             ["fixed_costs", "Fixed costs", 0]] },
+  breakeven: { title: "Break-even", help: "Units and revenue to cover fixed costs.",
+    fields: [["fixed_costs", "Fixed costs"], ["price", "Price"], ["variable_cost", "Variable cost / unit"],
+             ["expected_units", "Expected units (optional)", null], ["target_profit", "Target profit (optional)", null]] },
+  bridge: { title: "Profit bridge", help: "Price, volume, unit cost and fixed cost effects. Format: price,units,variable cost,fixed costs.",
+    fields: [["before", "Before", "10,1000,6,2000", "text"], ["after", "After", "9,1200,6.5,2300", "text"]] },
+  price: { title: "Price change", help: "Does a price move pay off? Give an elasticity, or a test result as old units,new units.",
+    fields: [["price", "Current price"], ["new_price", "New price"], ["units", "Current units"],
+             ["variable_cost", "Variable cost / unit"], ["fixed_costs", "Fixed costs", 0],
+             ["elasticity", "Elasticity, e.g. -1.5", null], ["test", "or test: old,new units", null, "text"]] },
+  synergy: { title: "M&A synergies", help: "Synergy value vs the premium paid.",
+    fields: [["run_rate", "Run-rate profit synergies"], ["multiple", "Valuation multiple", 8],
+             ["one_off", "One-off integration costs", 0], ["premium", "Premium (optional)", null]] },
+  share: { title: "Market share", help: "Share and relative share.",
+    fields: [["company", "Company sales"], ["market", "Market sales"], ["largest_rival", "Largest rival (optional)", null]] },
+  hhi: { title: "Concentration (HHI)", help: "One player per line: name=sales.",
+    fields: [["players", "Players", "ChargeCo=486000\nGridGo=324000\nOthers=270000", "lines"]] },
+  size: { title: "Market sizing", help: "Top-down funnel. Filters: one per line, label=fraction.",
+    fields: [["population", "Population"], ["filter", "Filters", "use fast charging=0.3", "lines"],
+             ["units_per_customer", "Units per customer / year"], ["price", "Price per unit"]] },
+  tree: { title: "Profitability tree", help: "The standard issue tree with a MECE check. Numbers are optional.",
+    fields: [["price", "Price", null], ["units", "Units", null], ["variable_cost", "Variable cost / unit", null],
+             ["fixed_costs", "Fixed costs", null], ["hints", "Show interviewer questions", true, "check"]] },
+};
+const $ = (id) => document.getElementById(id);
+const el = (tag, { dataset = {}, ...props } = {}, ...kids) => {
+  const node = Object.assign(document.createElement(tag), props);
+  Object.assign(node.dataset, dataset);  // dataset is getter-only; copy entries instead
+  node.append(...kids);
+  return node;
+};
+
+async function api(command, body = {}) {
+  const response = await fetch(`/api/${command}`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || response.statusText);
+  return data;
+}
+function show(pre, text, isError = false) {
+  pre.hidden = false;
+  pre.textContent = text;
+  pre.classList.toggle("error", isError);
+}
+
+// ---- tabs
+document.querySelectorAll("nav button").forEach((button) => button.addEventListener("click", () => {
+  document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", b === button));
+  for (const tab of ["calc", "cases", "drill"]) $(`tab-${tab}`).hidden = tab !== button.dataset.tab;
+}));
+
+// ---- calculators
+let current = "profit";
+function pickCalc(name) {
+  current = name;
+  const spec = CALCS[name];
+  $("calc-title").textContent = spec.title;
+  $("calc-help").textContent = spec.help;
+  $("calc-out").hidden = true;
+  $("calc-fields").replaceChildren(...spec.fields.map(([key, label, value, kind]) => {
+    if (kind === "check") {
+      return el("label", { className: "check" }, el("input", { type: "checkbox", name: key, checked: !!value }), label);
+    }
+    const input = kind === "lines"
+      ? el("textarea", { name: key, rows: 3, value: value ?? "" })
+      : el("input", { name: key, type: kind === "text" ? "text" : "number", step: "any",
+                      value: value ?? "", required: value === undefined });
+    return el("label", {}, label, input);
+  }));
+  document.querySelectorAll("#calc-list button").forEach((b) => b.setAttribute("aria-current", b.dataset.calc === name));
+}
+$("calc-list").append(...Object.entries(CALCS).map(([name, spec]) =>
+  el("button", { type: "button", dataset: { calc: name }, onclick: () => pickCalc(name) },
+     spec.title, el("small", {}, `casemath ${name}`))));
+$("calc-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const body = {};
+  for (const [key, , , kind] of CALCS[current].fields) {
+    const input = event.target.elements[key];
+    if (kind === "check") body[key] = input.checked;
+    else if (kind === "lines") body[key] = input.value.split("\n").map((s) => s.trim()).filter(Boolean);
+    else if (input.value !== "") body[key] = kind === "text" ? input.value : Number(input.value);
+  }
+  try { show($("calc-out"), (await api(current, body)).text); }
+  catch (error) { show($("calc-out"), error.message, true); }
+});
+pickCalc("profit");
+
+// ---- cases
+async function loadCases() {
+  const { data } = await api("case", { action: "list" });
+  $("case-list").replaceChildren(...data.map((c) =>
+    el("button", { type: "button", dataset: { id: c.id }, onclick: () => openCase(c) },
+       `${c.id}. ${c.title}`, el("small", {}, c.type))));
+}
+async function openCase(c) {
+  document.querySelectorAll("#case-list button").forEach((b) => b.setAttribute("aria-current", b.dataset.id === c.id));
+  $("case-title").textContent = c.title;
+  $("case-out").hidden = true;
+  const shown = await api("case", { action: "show", id: c.id });
+  // The prompt is hard-wrapped for the terminal; let the browser wrap it instead.
+  const prompt = shown.data.prompt;
+  show($("case-prompt"), shown.text.replace(prompt, prompt.replace(/\s*\n\s*/g, " ")));
+  const solve = $("case-solve");
+  solve.hidden = false;
+  solve.onclick = async () => show($("case-out"), (await api("case", { action: "solve", id: c.id })).text);
+}
+
+// ---- drill
+let score = { asked: 0, correct: 0 };
+function updateScore() {
+  $("drill-score").textContent = score.asked ? `Score: ${score.correct}/${score.asked}` : "";
+}
+$("drill-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.target.elements;
+  const body = { count: Number(form.count.value) || 5, topic: form.topic.value || null };
+  if (form.seed.value !== "") body.seed = Number(form.seed.value);
+  score = { asked: 0, correct: 0 };
+  updateScore();
+  try {
+    const { data } = await api("drill", body);
+    $("drill-questions").replaceChildren(...data.map((question, i) => {
+      const result = el("div", { className: "muted" });
+      const input = el("input", { placeholder: "your answer", autocomplete: "off" });
+      const button = el("button", { className: "primary", type: "submit" }, "Check");
+      const form = el("form", {}, input, button);
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try {
+          const r = await api("check", { question, answer: input.value });
+          input.disabled = button.disabled = true;
+          score.asked += 1; if (r.correct) score.correct += 1;
+          updateScore();
+          result.className = r.correct ? "good" : "error";
+          result.textContent = r.correct ? `Correct: ${r.shown_answer}` : `Not quite: ${r.shown_answer} (${r.explanation})`;
+        } catch (error) { result.className = "error"; result.textContent = error.message; }
+      });
+      return el("div", { className: "q" }, el("div", {}, el("strong", {}, `Q${i + 1} `),
+        el("span", { className: "muted" }, `[${question.topic}] `), question.prompt), form, result);
+    }));
+  } catch (error) {
+    $("drill-questions").replaceChildren(el("p", { className: "error" }, error.message));
+  }
+});
+
+// ---- boot
+fetch("/api/health").then((r) => r.json()).then((h) => { $("version").textContent = `v${h.version}`; });
+for (const topic of ["profit", "breakeven", "share", "sizing", "growth", "pricing", "synergy"]) {
+  $("drill-topic").append(el("option", { value: topic }, topic));
+}
+loadCases().catch((error) => { $("case-list").textContent = error.message; });
+</script>
+</body>
+</html>
