@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Consultant's Math</title>
+<meta name="description" content="Consulting case math in the browser: profitability, break-even, market share, market sizing, MECE issue trees and two solved practice cases.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f6f2; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a64; --line: #e4e1d8;
+    --accent: #1f5f4a; --accent-ink: #ffffff; --accent-soft: #e6f0ec; --code-bg: #fbfaf7;
+    --error: #a33a2b; --error-soft: #fbecea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141513; --panel: #1c1d1b; --ink: #ecebe6; --muted: #9c9a92; --line: #2e2f2c;
+      --accent: #5fb393; --accent-ink: #0e1a15; --accent-soft: #1e2d27; --code-bg: #171816;
+      --error: #f08b7c; --error-soft: #2d1c19;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141513; --panel: #1c1d1b; --ink: #ecebe6; --muted: #9c9a92; --line: #2e2f2c;
+    --accent: #5fb393; --accent-ink: #0e1a15; --accent-soft: #1e2d27; --code-bg: #171816;
+    --error: #f08b7c; --error-soft: #2d1c19;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 Inter, system-ui, sans-serif; }
+  a { color: var(--accent); }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 22px; }
+  h1 { font: 600 30px/1.15 "Source Serif 4", Georgia, serif; margin: 0; letter-spacing: -0.01em; }
+  .tagline { color: var(--muted); margin: 6px 0 0; max-width: 60ch; }
+  .links { font-size: 14px; display: flex; gap: 16px; }
+  .layout { display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: start; }
+  nav { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 16px; }
+  nav button { text-align: left; border: 0; background: none; color: var(--ink); font: inherit; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+  nav button:hover { background: var(--accent-soft); }
+  nav button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 500; }
+  nav .group { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 12px 12px 4px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px; min-width: 0; }
+  .panel h2 { font: 600 22px/1.2 "Source Serif 4", Georgia, serif; margin: 0 0 4px; }
+  .blurb { color: var(--muted); margin: 0 0 18px; }
+  .formula { font-family: "JetBrains Mono", monospace; font-size: 13px; background: var(--accent-soft); color: var(--ink); padding: 8px 12px; border-radius: 8px; margin: -6px 0 18px; overflow-x: auto; white-space: pre; }
+  form { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px 16px; }
+  label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 500; }
+  label small { color: var(--muted); font-weight: 400; }
+  label.wide { grid-column: 1 / -1; }
+  label.check { flex-direction: row; align-items: center; gap: 8px; }
+  input, select, textarea { font: 14px "JetBrains Mono", monospace; color: var(--ink); background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
+  label.check input { width: auto; }
+  textarea { min-height: 96px; resize: vertical; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 4px; }
+  .run { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 10px 18px; font: 600 14px Inter, sans-serif; cursor: pointer; }
+  .run:disabled { opacity: .5; cursor: wait; }
+  .cmd { margin-top: 20px; font-size: 12px; color: var(--muted); }
+  .cmd code { display: block; margin-top: 4px; font: 12.5px "JetBrains Mono", monospace; color: var(--ink); background: var(--code-bg); border: 1px dashed var(--line); padding: 8px 10px; border-radius: 8px; overflow-x: auto; white-space: pre; }
+  pre.out { margin: 12px 0 0; font: 13px/1.55 "JetBrains Mono", monospace; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow-x: auto; white-space: pre; min-height: 60px; }
+  pre.out.error { color: var(--error); background: var(--error-soft); border-color: transparent; }
+  .status { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #c9a227; }
+  .dot.ready { background: var(--accent); }
+  .dot.fail { background: var(--error); }
+  footer { color: var(--muted); font-size: 13px; margin-top: 28px; }
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; }
+    nav { position: static; flex-direction: row; overflow-x: auto; gap: 4px; padding-bottom: 4px; }
+    nav .group { display: none; }
+    nav button { white-space: nowrap; flex: none; }
+    .panel { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>The Consultant's Math</h1>
+      <p class="tagline">Case-interview math in your browser: profit, break-even, market share, market sizing, MECE trees and two solved cases. Runs the real tested Python package, no server.</p>
+    </div>
+    <div class="links">
+      <span class="status"><span class="dot" id="dot"></span><span id="status">Loading Python…</span></span>
+      <a href="https://github.com/anshumantewary-pm/The-Consultant-s-Math">GitHub</a>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav id="nav" role="tablist" aria-label="Calculators"></nav>
+    <main class="panel" id="panel" role="tabpanel"></main>
+  </div>
+
+  <footer>Every result here comes from <code>casemath.cli.main()</code> running in Pyodide, the same code that CI tests on every push.</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+const TOOLS = [
+  { group: "Profitability" },
+  { id: "profit", title: "Profit statement", cmd: "profit",
+    blurb: "One-period P&L from unit economics.",
+    formula: "Profit = (Price − Unit cost) × Units − Fixed costs",
+    fields: [
+      { flag: "--price", label: "Price per unit", value: 10 },
+      { flag: "--units", label: "Units sold", value: 1000 },
+      { flag: "--variable-cost", label: "Variable cost per unit", value: 6 },
+      { flag: "--fixed-costs", label: "Fixed costs", value: 2500 },
+    ] },
+  { id: "bridge", title: "Profit bridge", cmd: "bridge",
+    blurb: "Profit moved. How much came from price, volume, unit cost and fixed cost? The four effects add up exactly to the change.",
+    formula: "Each period: price, units, unit cost, fixed costs",
+    fields: [
+      { flag: "--before", label: "Before", hint: "price, units, unit cost, fixed", value: "10,1000,6,2000", type: "text" },
+      { flag: "--after", label: "After", hint: "price, units, unit cost, fixed", value: "9,1200,6.5,2300", type: "text" },
+    ] },
+  { id: "breakeven", title: "Break-even", cmd: "breakeven",
+    blurb: "Units and revenue needed to cover fixed costs, plus margin of safety and units for a target profit.",
+    formula: "Break-even units = Fixed costs / (Price − Unit cost)",
+    fields: [
+      { flag: "--fixed-costs", label: "Fixed costs", value: 100000 },
+      { flag: "--price", label: "Price per unit", value: 10 },
+      { flag: "--variable-cost", label: "Variable cost per unit", value: 6 },
+      { flag: "--expected-units", label: "Expected units", hint: "optional", value: 40000 },
+      { flag: "--target-profit", label: "Target profit", hint: "optional", value: "" },
+    ] },
+  { group: "Market" },
+  { id: "share", title: "Market share", cmd: "share",
+    blurb: "Your share of the market, and your size relative to the biggest rival (above 1× means you lead).",
+    formula: "Share = Company sales / Market sales",
+    fields: [
+      { flag: "--company", label: "Company sales", value: 60 },
+      { flag: "--market", label: "Total market sales", value: 400 },
+      { flag: "--largest-rival", label: "Largest rival's sales", hint: "optional", value: 40 },
+    ] },
+  { id: "hhi", title: "Concentration (HHI)", cmd: "hhi",
+    blurb: "Share table and Herfindahl-Hirschman Index. Below 1,000 is fragmented, above 1,800 is highly concentrated.",
+    formula: "HHI = Σ (share in %)²",
+    fields: [
+      { positional: true, label: "Players", hint: "one per line: NAME=SALES", type: "textarea", wide: true,
+        value: "ChargeCo=486000\nGridGo=324000\nIndependents=270000" },
+    ] },
+  { id: "size", title: "Market sizing", cmd: "size",
+    blurb: "Top-down: start from a population and narrow it with each filter in turn.",
+    formula: "Population × filters × units per customer × price",
+    fields: [
+      { flag: "--population", label: "Starting population", value: 50000 },
+      { flag: "--units-per-customer", label: "Units per customer per year", value: 72 },
+      { flag: "--price", label: "Price per unit", value: 8 },
+      { flag: "--filter", repeat: true, label: "Filters", hint: "one per line: LABEL=FRACTION", type: "textarea", wide: true,
+        value: "use public fast charging=0.3" },
+    ] },
+  { group: "Frameworks" },
+  { id: "tree", title: "Profitability tree", cmd: "tree",
+    blurb: "The standard framework as an issue tree, with a MECE check. Fill in numbers to see each node's value, or leave blank for the structure.",
+    fields: [
+      { flag: "--price", label: "Price", hint: "optional", value: "" },
+      { flag: "--units", label: "Units", hint: "optional", value: "" },
+      { flag: "--variable-cost", label: "Variable cost per unit", hint: "optional", value: "" },
+      { flag: "--fixed-costs", label: "Fixed costs", hint: "optional", value: "" },
+      { flag: "--hints", label: "Show the question to ask at each node", type: "checkbox", value: true },
+    ] },
+  { id: "case", title: "Practice cases", cmd: "case",
+    blurb: "Case 1: Brewline Beverages (profitability). Case 2: VoltWay EV charging (market entry). Read the prompt, try it yourself, then solve.",
+    fields: [
+      { positional: true, label: "Action", type: "select", options: ["solve", "show", "list"], value: "show" },
+      { positional: true, label: "Case", type: "select", options: ["1", "2"], value: "1", skipIf: f => f.Action === "list" },
+    ] },
+];
+
+const nav = document.getElementById("nav");
+const panel = document.getElementById("panel");
+let runner = null;
+let current = null;
+
+function setStatus(text, state) {
+  document.getElementById("status").textContent = text;
+  document.getElementById("dot").className = "dot" + (state ? " " + state : "");
+}
+
+function el(tag, attrs = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "text") node.textContent = v; else if (v !== undefined && v !== null) node.setAttribute(k, v);
+  }
+  for (const c of [].concat(children)) if (c) node.append(c);
+  return node;
+}
+
+function renderNav() {
+  for (const t of TOOLS) {
+    if (t.group) { nav.append(el("div", { class: "group", text: t.group })); continue; }
+    const b = el("button", { role: "tab", "aria-selected": "false", "data-id": t.id, text: t.title });
+    b.addEventListener("click", () => select(t.id));
+    nav.append(b);
+  }
+}
+
+function fieldInput(f, i) {
+  const id = `f${i}`;
+  let input;
+  if (f.type === "textarea") input = el("textarea", { id }), input.value = f.value;
+  else if (f.type === "select") {
+    input = el("select", { id }, f.options.map(o => el("option", { value: o, text: o })));
+    input.value = f.value;
+  } else if (f.type === "checkbox") {
+    input = el("input", { id, type: "checkbox" }); input.checked = !!f.value;
+    return el("label", { class: "check wide", for: id }, [input, document.createTextNode(f.label)]);
+  } else {
+    input = el("input", { id, type: f.type === "text" ? "text" : "number", step: "any", inputmode: "decimal" });
+    input.value = f.value;
+  }
+  const label = el("label", { class: f.wide ? "wide" : null, for: id }, [
+    document.createTextNode(f.label), f.hint ? el("small", { text: f.hint }) : null, input,
+  ]);
+  return label;
+}
+
+function select(id) {
+  current = TOOLS.find(t => t.id === id);
+  for (const b of nav.querySelectorAll("button")) b.setAttribute("aria-selected", String(b.dataset.id === id));
+  try { localStorage.setItem("casemath-tab", id); } catch (_) {}
+
+  const form = el("form");
+  current.fields.forEach((f, i) => form.append(fieldInput(f, i)));
+  const json = el("input", { type: "checkbox", id: "json" });
+  const runBtn = el("button", { class: "run", type: "submit", text: "Calculate" });
+  if (!runner) runBtn.disabled = true;
+  form.append(el("div", { class: "actions" }, [
+    runBtn, el("label", { class: "check", for: "json" }, [json, document.createTextNode("JSON output")]),
+  ]));
+  const out = el("pre", { class: "out", "aria-live": "polite", text: runner ? "" : "Loading Python…" });
+  const cmd = el("div", { class: "cmd", text: "Same thing on the command line:" }, [el("code")]);
+
+  panel.replaceChildren(
+    el("h2", { text: current.title }), el("p", { class: "blurb", text: current.blurb }),
+    current.formula ? el("div", { class: "formula", text: current.formula }) : null,
+    form, out, cmd,
+  );
+  form.addEventListener("submit", e => { e.preventDefault(); run(); });
+  form.addEventListener("input", updateCmd);
+  updateCmd();
+  if (runner) run();
+}
+
+function buildArgv() {
+  const argv = [current.cmd];
+  const byLabel = {};
+  current.fields.forEach((f, i) => {
+    const node = document.getElementById(`f${i}`);
+    byLabel[f.label] = f.type === "checkbox" ? node.checked : node.value;
+  });
+  current.fields.forEach(f => {
+    const v = byLabel[f.label];
+    if (f.skipIf && f.skipIf(byLabel)) return;
+    if (f.type === "checkbox") { if (v) argv.push(f.flag); return; }
+    const lines = f.type === "textarea" ? String(v).split("\n").map(s => s.trim()).filter(Boolean) : [String(v).trim()];
+    for (const line of lines) {
+      if (line === "") continue;
+      if (f.positional) argv.push(line); else argv.push(f.flag, line);
+    }
+  });
+  if (document.getElementById("json")?.checked) argv.push("--json");
+  return argv;
+}
+
+function quote(a) { return /^[\w.,=\/-]+$/.test(a) ? a : `"${a.replace(/"/g, '\\"')}"`; }
+function updateCmd() { panel.querySelector(".cmd code").textContent = "casemath " + buildArgv().map(quote).join(" "); }
+
+function run() {
+  if (!runner) return;
+  updateCmd();
+  const out = panel.querySelector("pre.out");
+  const result = JSON.parse(runner(JSON.stringify(buildArgv())));
+  const text = (result.out || "") + (result.err || "");
+  out.textContent = text.trim() || "(no output)";
+  out.classList.toggle("error", result.code !== 0);
+}
+
+const GLUE = `
+import contextlib, io, json
+from casemath.cli import main
+
+def run(argv_json):
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        try:
+            code = main(json.loads(argv_json))
+        except SystemExit as exc:
+            code = exc.code if isinstance(exc.code, int) else 1
+    return json.dumps({"code": code, "out": out.getvalue(), "err": err.getvalue()})
+run
+`;
+
+async function boot() {
+  try {
+    const manifest = await (await fetch("manifest.json", { cache: "no-store" })).json();
+    const pyodide = await loadPyodide();
+    await pyodide.loadPackage("micropip");
+    const micropip = pyodide.pyimport("micropip");
+    await micropip.install(new URL(manifest.wheel, location.href).href);
+    runner = pyodide.runPython(GLUE);
+    setStatus(`casemath ${manifest.version} ready`, "ready");
+    select(current.id);
+  } catch (err) {
+    console.error(err);
+    setStatus("Failed to load Python", "fail");
+    const out = panel.querySelector("pre.out");
+    out.textContent = "Could not load the Python runtime: " + err.message;
+    out.classList.add("error");
+  }
+}
+
+renderNav();
+let start = "profit";
+try { start = localStorage.getItem("casemath-tab") || start; } catch (_) {}
+select(TOOLS.some(t => t.id === start) ? start : "profit");
+boot();
+</script>
+</body>
+</html>
