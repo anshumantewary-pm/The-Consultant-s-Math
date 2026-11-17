@@ -181,7 +181,7 @@ Optional: `pip install pre-commit && pre-commit install` runs ruff on every comm
 
 [`pages.yml`](.github/workflows/pages.yml) tests, builds the wheel and deploys [`web/`](web/index.html) to GitHub Pages on every push to `main`. The page installs that wheel into Pyodide, so the browser runs exactly the code CI tested.
 
-Pushing a tag like `v0.1.0` runs [`release.yml`](.github/workflows/release.yml): it checks the tag matches the package version, re-runs the checks, and attaches the built files to a GitHub Release. Dependabot keeps actions and dev tools current.
+Pushing a tag like `v0.2.0` runs [`release.yml`](.github/workflows/release.yml): it checks the tag matches the package version, re-runs the checks, and attaches the built files to a GitHub Release. Dependabot keeps actions and dev tools current.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) to add a calculator or a case, and [CHANGELOG.md](CHANGELOG.md) for releases.
 

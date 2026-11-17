@@ -1,8 +1,11 @@
 import json
 import math
+import re
+from pathlib import Path
 
 import pytest
 
+from casemath import __version__
 from casemath.core import (
     Step,
     UnknownCaseError,
@@ -131,3 +134,11 @@ class TestRequireNumbers:
     def test_rejects(self, bad: object, message: str) -> None:
         with pytest.raises(ValidationError, match=message):
             require_numbers("flows", bad)
+
+
+def test_package_and_pyproject_versions_match() -> None:
+    # Regex rather than tomllib, which only exists from Python 3.11.
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    match = re.search(r'^version = "([^"]+)"', pyproject.read_text(encoding="utf-8"), re.M)
+    assert match is not None
+    assert match.group(1) == __version__
