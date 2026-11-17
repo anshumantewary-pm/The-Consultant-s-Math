@@ -1,7 +1,7 @@
 import pytest
 
 from casemath.analysis.model import Inputs, check_inputs, evaluate
-from casemath.analysis.sensitivity import one_way, tornado
+from casemath.analysis.sensitivity import one_way, tornado, two_way
 from casemath.core import ValidationError
 
 
@@ -76,3 +76,19 @@ class TestTornado:
     def test_bad_pct(self) -> None:
         with pytest.raises(ValidationError, match="pct"):
             tornado(profit, BASE, pct=0)
+
+
+class TestTwoWay:
+    def test_grid(self) -> None:
+        t = two_way(profit, BASE, ("price", [9, 11]), ("units", [500, 1_500]))
+        assert t.grid == ((-1_000, 2_000), (0, 5_000))
+        assert t.count_at_least() == 3
+        assert t.count_at_least(threshold=2_500) == 1
+
+    def test_same_input_twice(self) -> None:
+        with pytest.raises(ValidationError, match="different inputs"):
+            two_way(profit, BASE, ("price", [1]), ("price", [2]))
+
+    def test_empty_axis(self) -> None:
+        with pytest.raises(ValidationError, match="column values"):
+            two_way(profit, BASE, ("price", [1]), ("units", []))

@@ -92,3 +92,37 @@ def tornado(
         )
     bars.sort(key=lambda bar: bar.swing, reverse=True)
     return Tornado(base_output=evaluate(model, checked), bars=tuple(bars))
+
+
+@dataclass(frozen=True)
+class TwoWay(Result):
+    row_input: str
+    column_input: str
+    row_values: tuple[float, ...]
+    column_values: tuple[float, ...]
+    grid: tuple[tuple[float, ...], ...]  # grid[i][j] = output at row i, column j
+
+    def count_at_least(self, threshold: float = 0.0) -> int:
+        """How many combinations land at or above ``threshold``."""
+        return sum(1 for row in self.grid for cell in row if cell >= threshold)
+
+
+def two_way(
+    model: Model,
+    base: Inputs,
+    row: tuple[str, Sequence[float]],
+    column: tuple[str, Sequence[float]],
+) -> TwoWay:
+    """The spreadsheet "data table": the output for every pair of two inputs."""
+    row_name, row_values = row
+    column_name, column_values = column
+    if row_name == column_name:
+        raise ValidationError("row and column must be different inputs")
+    checked = check_inputs(base, [row_name, column_name])
+    rows = require_numbers("row values", row_values)
+    columns = require_numbers("column values", column_values)
+    grid = tuple(
+        tuple(evaluate(model, {**checked, row_name: r, column_name: c}) for c in columns)
+        for r in rows
+    )
+    return TwoWay(row_name, column_name, rows, columns, grid)
