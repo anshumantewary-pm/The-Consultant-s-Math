@@ -59,3 +59,39 @@ def perpetuity(payment: float, rate: float, growth: float = 0.0) -> float:
             "otherwise the stream is worth infinitely much"
         )
     return payment / (rate - growth)
+
+
+_IRR_GRID = (-0.99, -0.9, -0.75, -0.5, -0.25, 0, 0.05, 0.1, 0.2, 0.35, 0.5, 0.75, 1, 2, 5, 10, 100)
+
+
+def irr(flows: list[float] | tuple[float, ...], tolerance: float = 1e-10) -> float:
+    """Internal rate of return: the rate at which NPV is zero.
+
+    Scans a grid of rates for the first sign change in NPV, then bisects, so it
+    never diverges the way Newton's method can. When the flows change sign more
+    than once there may be several IRRs; this returns the lowest one in
+    (-99%, 10000%).
+    """
+    values = require_numbers("flows", flows)
+    if not (any(v > 0 for v in values) and any(v < 0 for v in values)):
+        raise ValidationError(
+            "flows need at least one negative and one positive value to have an IRR"
+        )
+    grid = (*_IRR_GRID, 10.0, 100.0)
+    previous_rate, previous_npv = grid[0], npv(grid[0], values)
+    for rate in grid[1:]:
+        current = npv(rate, values)
+        if previous_npv == 0:
+            return previous_rate
+        if (previous_npv < 0) != (current < 0):
+            low, high, f_low = previous_rate, rate, previous_npv
+            while high - low > tolerance:
+                mid = (low + high) / 2
+                f_mid = npv(mid, values)
+                if (f_mid < 0) == (f_low < 0):
+                    low, f_low = mid, f_mid
+                else:
+                    high = mid
+            return (low + high) / 2
+        previous_rate, previous_npv = rate, current
+    raise ValidationError("no IRR found between -99% and 10,000%")

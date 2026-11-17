@@ -3,6 +3,7 @@ import pytest
 from casemath.calculators.finance import (
     annuity_pv,
     discount_factor,
+    irr,
     npv,
     perpetuity,
     present_value,
@@ -65,3 +66,28 @@ class TestPerpetuity:
     def test_rejects_growth_at_or_above_rate(self) -> None:
         with pytest.raises(ValidationError, match="infinitely"):
             perpetuity(100, 0.05, growth=0.05)
+
+
+class TestIrr:
+    def test_textbook(self) -> None:
+        rate = irr([-1_000, 500, 500, 500])
+        assert rate == pytest.approx(0.23375, abs=1e-5)
+        assert npv(rate, [-1_000, 500, 500, 500]) == pytest.approx(0, abs=1e-6)
+
+    def test_negative_irr(self) -> None:
+        assert irr([-100, 40, 40]) == pytest.approx(-0.136675, abs=1e-5)
+
+    def test_exact_grid_hit(self) -> None:
+        assert irr([-100, 100]) == 0
+
+    def test_high_return(self) -> None:
+        assert irr([-1, 30]) == pytest.approx(29)
+
+    def test_needs_both_signs(self) -> None:
+        with pytest.raises(ValidationError, match="one negative and one positive"):
+            irr([100, 50])
+
+    def test_no_root_in_range(self) -> None:
+        # NPV is positive at every rate above -99%: lend 1, get 1 back, plus 1 today.
+        with pytest.raises(ValidationError, match="no IRR"):
+            irr([1, -1, 1.0001])
