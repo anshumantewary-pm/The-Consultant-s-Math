@@ -18,6 +18,7 @@ from casemath import __version__
 from casemath.calculators import (
     break_even_analysis,
     hhi,
+    investment_appraisal,
     market_share,
     profit_bridge,
     profit_statement,
@@ -167,6 +168,28 @@ def _case(args: argparse.Namespace) -> Output:
     return Output(render_solution(solution), solution.to_dict())
 
 
+def _optional(value: float | None, render: Callable[[float], str], never: str = "never") -> str:
+    return never if value is None else render(value)
+
+
+def _years(value: float) -> str:
+    return f"{value:.2f} periods"
+
+
+def _invest(args: argparse.Namespace) -> Output:
+    a = investment_appraisal(args.rate, args.flows)
+    lines = [
+        f"Discount rate      {fmt_pct(a.rate)}",
+        f"NPV                {fmt_money(a.npv)}",
+        f"IRR                {_optional(a.irr, fmt_pct, 'n/a (flows do not change sign)')}",
+        f"Profitability idx  {_optional(a.profitability_index, lambda v: f'{v:.2f}x', 'n/a')}",
+        f"Payback            {_optional(a.simple_payback, _years)}",
+        f"Discounted payback {_optional(a.discounted_payback, _years)}",
+        f"Decision (NPV > 0) {'invest' if a.accept else 'do not invest'}",
+    ]
+    return Output("\n".join(lines), {**a.to_dict(), "accept": a.accept})
+
+
 # ---------------------------------------------------------------- parser
 
 
@@ -215,6 +238,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--filter", action="append", default=[], metavar="LABEL=FRACTION")
     p.add_argument("--units-per-customer", type=float, required=True, help="per year")
     p.add_argument("--price", type=float, required=True, help="per unit")
+
+    p = add("invest", _invest, "NPV, IRR, profitability index and payback of a cash-flow series")
+    p.add_argument("--rate", type=float, required=True, help="discount rate per period, e.g. 0.1")
+    p.add_argument(
+        "flows",
+        nargs="+",
+        type=float,
+        metavar="FLOW",
+        help="period 0 first (usually negative); put -- before flows like -1e6",
+    )
 
     p = add("tree", _tree, "the profitability issue tree, with a MECE check")
     p.add_argument("--price", type=float)
