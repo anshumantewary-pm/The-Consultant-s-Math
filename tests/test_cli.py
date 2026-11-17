@@ -159,7 +159,7 @@ class TestCase:
     def test_list_json(self, capsys: pytest.CaptureFixture[str]) -> None:
         data = run_json(capsys, "case", "list")
         assert isinstance(data, list)
-        assert [c["id"] for c in data] == [c.id for c in list_cases()]
+        assert [c["id"] for c in data] == ["1", "2", "3", "4", "5", "6"]
 
     def test_show(self, capsys: pytest.CaptureFixture[str]) -> None:
         code, out, _ = run(capsys, "case", "show", "2")
@@ -235,3 +235,98 @@ def test_tree_survives_a_cp1252_pipe() -> None:
         env=env,
     )
     assert "├──".encode() in result.stdout
+
+
+class TestPrice:
+    def test_with_elasticity(self, capsys: pytest.CaptureFixture[str]) -> None:
+        code, out, _ = run(
+            capsys, "price", "--price", "40", "--new-price", "50", "--units", "8000",
+            "--variable-cost", "10", "--elasticity", "-0.2",
+        )  # fmt: skip
+        assert code == 0
+        assert "Break-even volume  -25.0%" in out
+        assert "(pays off)" in out
+
+    def test_from_test_json(self, capsys: pytest.CaptureFixture[str]) -> None:
+        data = run_json(
+            capsys, "price", "--price", "40", "--new-price", "44", "--units", "3000",
+            "--variable-cost", "10", "--test", "3000,2550",
+        )  # fmt: skip
+        assert isinstance(data, dict)
+        assert data["elasticity"] == pytest.approx(-1.7027, rel=1e-4)
+        assert data["pays_off"] is False
+
+    @pytest.mark.parametrize(
+        ("extra", "message"),
+        [((), "give --elasticity"), (("--test", "1,2,3"), "--test must be")],
+    )
+    def test_errors(
+        self, capsys: pytest.CaptureFixture[str], extra: tuple[str, ...], message: str
+    ) -> None:
+        code, _, err = run(
+            capsys, "price", "--price", "40", "--new-price", "44", "--units", "1",
+            "--variable-cost", "10", *extra,
+        )  # fmt: skip
+        assert code == 2
+        assert message in err
+
+
+class TestSynergy:
+    def test_value_only(self, capsys: pytest.CaptureFixture[str]) -> None:
+        code, out, _ = run(capsys, "synergy", "--run-rate", "20", "--multiple", "8")
+        assert code == 0
+        assert "Synergy value      $160.00" in out
+
+    def test_premium(self, capsys: pytest.CaptureFixture[str]) -> None:
+        data = run_json(
+            capsys, "synergy", "--run-rate", "18e6", "--multiple", "8", "--one-off", "30e6",
+            "--premium", "120e6",
+        )  # fmt: skip
+        assert data == {
+            "synergy_value": 114e6,
+            "premium": 120e6,
+            "headroom": -6e6,
+            "justified": False,
+        }
+
+    def test_premium_text(self, capsys: pytest.CaptureFixture[str]) -> None:
+        _, out, _ = run(
+            capsys, "synergy", "--run-rate", "20", "--multiple", "8", "--premium", "100"
+        )
+        assert "+$60.00  (justified)" in out
+
+
+class TestDrill:
+    def test_reveal(self, capsys: pytest.CaptureFixture[str]) -> None:
+        code, out, _ = run(capsys, "drill", "--topic", "breakeven", "--seed", "1", "--reveal")
+        assert code == 0
+        assert out.count("Q") >= 5
+        assert "[breakeven]" in out or "[payback]" in out
+
+    def test_json(self, capsys: pytest.CaptureFixture[str]) -> None:
+        data = run_json(capsys, "drill", "--count", "3", "--seed", "9")
+        assert isinstance(data, list)
+        assert len(data) == 3
+        assert {"prompt", "answer", "unit", "explanation"} <= set(data[0])
+
+    def test_interactive(
+        self, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        answers = iter(["", "q"])
+        monkeypatch.setattr("builtins.input", lambda _prompt="": next(answers))
+        code, out, _ = run(capsys, "drill", "--count", "3", "--seed", "2")
+        assert code == 0
+        assert "Skipped. Answer:" in out
+        assert "Score: 0/1 (0%)" in out
+
+    def test_interactive_nothing_asked(
+        self, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("builtins.input", lambda _prompt="": "q")
+        _, out, _ = run(capsys, "drill", "--count", "1")
+        assert out.rstrip().endswith("Score: 0/0")
+
+    def test_bad_count(self, capsys: pytest.CaptureFixture[str]) -> None:
+        code, _, err = run(capsys, "drill", "--count", "0")
+        assert code == 2
+        assert "count" in err

@@ -1,4 +1,4 @@
-"""Case 4: Northwind Logistics, automate the main warehouse?
+"""Case 6: Northwind Logistics, automate the main warehouse?
 
 Skills: building a cash-flow model, NPV / IRR / discounted payback, weighted
 scenarios, Monte Carlo risk, goal seek on a point estimate and on a
@@ -84,7 +84,7 @@ def loss_probability(x: Inputs) -> float:
 
 
 class AutomationInvestmentCase(Case):
-    id = "4"
+    id = "6"
     title = "Northwind Logistics: automate the main warehouse?"
     case_type = "Investment"
     skills = ("NPV", "IRR", "scenarios", "Monte Carlo", "goal seek", "negotiation target")

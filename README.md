@@ -5,7 +5,7 @@
 ![Coverage](https://img.shields.io/badge/coverage-%E2%89%A595%25-brightgreen)
 ![Dependencies](https://img.shields.io/badge/runtime%20deps-0-brightgreen)
 
-A consulting case math toolkit. Profitability, break-even, market share and sizing, NPV/IRR, pricing and unit economics calculators; sensitivity, goal seek, scenario and Monte Carlo analysis that works on any of them; a MECE issue-tree checker; and four fully solved practice cases. Python library, CLI and an in-browser web app, no runtime dependencies.
+A consulting case math toolkit. Profitability, break-even, market share and sizing, pricing, M&A synergy, NPV/IRR and unit economics calculators; sensitivity, goal seek, scenario and Monte Carlo analysis that works on any of them; a MECE issue-tree checker; six fully solved practice cases; a drill mode that quizzes you with checked answers; and two web front ends (a local UI and an in-browser app on GitHub Pages). Python library and CLI, no runtime dependencies.
 
 ```console
 $ casemath breakeven --fixed-costs 100000 --price 10 --variable-cost 6 --expected-units 40000
@@ -31,12 +31,15 @@ pip install -e ".[dev]"     # or: pip install .   (no dev tools)
 | **Break-even** | `break_even_units`, `break_even_revenue`, `break_even_price`, `units_for_target_profit`, `margin_of_safety`, `payback_period`, `break_even_analysis` | `breakeven` |
 | **Market share** | `market_share`, `relative_market_share`, `required_share`, `share_table`, `hhi`, `project_share`, `cagr` | `share`, `hhi` |
 | **Market sizing** | `top_down`, `bottom_up` (every step recorded) | `size` |
+| **Pricing** | `price_elasticity` (midpoint), `break_even_volume_change`, `price_change_impact`, `profit_maximising_price`, `optimal_price_linear`, `volume_after_price_change` | `price`, `optimal-price` |
+| **M&A synergies** | `SynergyItem` (cost or revenue, with risk haircut), `synergy_schedule` (phase-in, integration costs, payback), `synergy_value`, `acquisition_premium` | `synergy` |
 | **Finance** | `npv`, `irr`, `simple_payback`, `discounted_payback`, `annuity_pv`, `perpetuity`, `investment_appraisal` | `invest` |
-| **Pricing** | `arc_elasticity`, `breakeven_volume_change`, `volume_after_price_change`, `markup_price`, `optimal_price_linear` | `pricing` |
 | **Unit economics** | `lifetime_value`, `cac_payback`, `unit_economics` (LTV/CAC health check) | `unit-econ` |
 | **Analysis** | `one_way`, `tornado`, `two_way`, `goal_seek`, `compare_scenarios`, `simulate` with `Uniform` / `Triangular` / `Normal` inputs | `sensitivity`, `goalseek`, `simulate`, `models` |
 | **Frameworks** | `profitability_tree`, issue-tree `Node`, `render`, `check_mece` | `tree` |
 | **Practice cases** | `get_case("1").solve()` | `case list / show / solve` |
+| **Drill** | `drill.generate(topic, count, seed)`, `drill.run_drill` | `drill` |
+| **Web UI** | `web.make_server`, `web.call` (JSON API over the CLI) | `serve` |
 
 ## CLI tour
 
@@ -57,15 +60,22 @@ casemath hhi ChargeCo=486000 GridGo=324000 Others=270000
 casemath size --population 50000 --filter "use fast charging=0.3" \
               --units-per-customer 72 --price 8
 
+# Will a price rise pay off? Give an elasticity, or measure it from a test (OLD_UNITS,NEW_UNITS)
+casemath price --price 40 --new-price 50 --units 8000 --variable-cost 10 --elasticity -0.2
+casemath price --price 40 --new-price 44 --units 3000 --variable-cost 10 --test 3000,2550
+
+# Are the synergies worth the premium?
+casemath synergy --run-rate 18e6 --multiple 8 --one-off 30e6 --premium 120e6
+
 # The profitability framework, with the question to ask at each node
 casemath tree --hints
 
 # Investments: NPV, IRR, profitability index, payback
 casemath invest --rate 0.1 -1000000 300000 300000 300000 300000 300000
 
-# Pricing: does a 10% cut pay at a 30% margin, given elasticity -2?
-casemath pricing change --change -0.1 --margin 0.3 --elasticity -2
-casemath pricing optimal --points 120,400,99,470 --unit-cost 24
+# Profit-maximising price from two observed (price, volume) points, or from an elasticity
+casemath optimal-price --points 120,400,99,470 --unit-cost 24
+casemath optimal-price --elasticity -3 --unit-cost 10
 
 # SaaS unit economics
 casemath unit-econ --revenue 120 --margin 0.8 --churn 0.03 --cac 1800
@@ -75,11 +85,21 @@ casemath sensitivity profit                                   # tornado, +/-10%
 casemath goalseek profit --vary units --between 0:100000      # break-even volume
 casemath simulate profit --dist units=tri:20000:40000:45000 --dist variable_cost=normal:6:0.5
 
-# Practice cases
+# Practice cases (1 to 6)
 casemath case list
 casemath case show 1
-casemath case solve 2
+casemath case solve 6
+
+# Drill: 5 mixed questions, answer in plain text ($1.2M, 25%, 41,667). Enter skips, q quits.
+casemath drill
+casemath drill --topic pricing --count 10 --seed 7   # same seed, same questions
+casemath drill --seed 7 --reveal                     # answer key, no quiz
+
+# Web UI: calculators, cases and drill in the browser (localhost only by default)
+casemath serve --open
 ```
+
+`casemath serve` runs a small standard-library HTTP server. The page posts JSON to `/api/<command>`; the body is turned into the same arguments the CLI takes and parsed by the CLI's own parser, so the browser and the terminal always give the same answers and the same errors.
 
 ## Library use
 
@@ -133,10 +153,12 @@ Bad inputs raise `casemath.core.ValidationError` (a `ValueError`) with the argum
 |---|---|---|---|
 | 1 | [Brewline Beverages](docs/cases/case-01-brewline.md) | Profitability | Juice unit costs (+30%) explain 73% of a $3.8M profit drop; the Energy Drinks price cut explains the rest. Fix Juice pricing, reverse the cut. |
 | 2 | [VoltWay EV charging](docs/cases/case-02-voltway.md) | Market entry | Retail-only entry needs 24.7% share and pays back in 7.6 years: no. With a fleet anchor of at least 69,159 sessions a year: yes. |
-| 3 | [Lumen Analytics](docs/cases/case-03-lumen.md) | Pricing | A 17.5% cut needs +28% volume; the test showed +17.5% (elasticity −0.84). Don't cut: test ~$132 and get churn from 3% to 1.8% to reach 3× LTV/CAC. |
-| 4 | [Northwind warehouse](docs/cases/case-04-northwind.md) | Investment under uncertainty | NPV +$3.5M, IRR 16.5%, but a 21% chance of loss in simulation. Negotiate 7.3% off the $12M quote to meet the board's 10% risk rule. |
+| 3 | [LedgerLite pricing](docs/cases/case-03-ledgerlite.md) | Pricing | A uniform +15% is a wash: small businesses (e = -1.70) leave faster than the 16.7% limit. A $50 Pro tier for accounting firms (e = -0.21) adds $63K a month. |
+| 4 | [Northfield / Crestline](docs/cases/case-04-northfield.md) | M&A | The $120M premium is covered by synergies worth $144M after a revenue haircut, but cost synergies alone ($114M) fall $6M short. Walk away above $544M; put the rest in an earn-out. |
+| 5 | [Lumen Analytics](docs/cases/case-05-lumen.md) | SaaS pricing | A 17.5% cut needs +28% volume; the test showed +17.5% (elasticity −0.84). Don't cut: test ~$132 and get churn from 3% to 1.8% to reach 3× LTV/CAC. |
+| 6 | [Northwind warehouse](docs/cases/case-06-northwind.md) | Investment under uncertainty | NPV +$3.5M, IRR 16.5%, but a 21% chance of loss in simulation. Negotiate 7.3% off the $12M quote to meet the board's 10% risk rule. |
 
-The reasoning behind all four is in [docs/frameworks.md](docs/frameworks.md): the profitability framework, MECE thinking, break-even and share metrics, valuation, pricing, unit economics and deciding under uncertainty.
+The reasoning behind them is in [docs/frameworks.md](docs/frameworks.md): the profitability framework, MECE thinking, break-even, share metrics, pricing, synergies, valuation, unit economics and deciding under uncertainty.
 
 ## Project layout
 
@@ -144,18 +166,20 @@ The reasoning behind all four is in [docs/frameworks.md](docs/frameworks.md): th
 src/casemath/
 ├── core/          errors, validation, formatting, Result base
 ├── calculators/   profitability, breakeven, market_share, market_sizing, growth,
-│                  finance, pricing, unit_economics
+│                  pricing, synergy, finance, unit_economics
 ├── frameworks/    issue_tree, mece, profitability (the standard tree)
 ├── analysis/      model, sensitivity, goal_seek, scenarios, distributions,
 │                  montecarlo, models (built-in models for the CLI)
-├── cases/         base + four solved cases
+├── cases/         base, case_01 … case_06
+├── drill.py       random practice questions with checked answers
+├── web/           api (JSON over the CLI), server (http.server), index.html
 └── cli.py         argparse front end
-web/               single-page app that runs the package in the browser (Pyodide)
-tests/             one test module per area plus an import-layering check, 383 tests
+web/               GitHub Pages app that runs the package in the browser (Pyodide)
+tests/             one test module per area plus an import-layering check, 498 tests
 docs/              PRD, architecture, frameworks guide, case write-ups
 ```
 
-Layers only import downward (core ← calculators / frameworks ← analysis ← cases ← cli), and a test enforces it. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Requirements: [docs/PRD.md](docs/PRD.md).
+Layers only import downward (core ← calculators / frameworks ← analysis ← cases / drill ← cli ← web), and a test enforces it. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Requirements: [docs/PRD.md](docs/PRD.md).
 
 ## Development
 

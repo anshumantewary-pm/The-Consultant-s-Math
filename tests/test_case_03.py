@@ -3,67 +3,59 @@ import json
 import pytest
 
 from casemath.cases import get_case, render_case, render_solution
-from casemath.cases.case_03_saas_pricing import ltv_to_cac
 from casemath.frameworks import check_mece
 
 
 @pytest.fixture(scope="module")
-def answer() -> dict[str, float | None]:
-    return get_case("3").solve().answer
+def solution():  # type: ignore[no-untyped-def]
+    return get_case("3").solve()
 
 
-def test_cut_does_not_pay(answer: dict[str, float | None]) -> None:
-    # -17.5% at 80% margin: 0.175 / 0.625 = 28% needed; test gave 470/400 - 1 = 17.5%
-    assert answer["price_change"] == pytest.approx(-0.175)
-    assert answer["volume_needed"] == pytest.approx(0.28)
-    assert answer["volume_observed"] == pytest.approx(0.175)
-    assert answer["volume_observed"] < answer["volume_needed"]  # type: ignore[operator]
+def test_headline(solution) -> None:  # type: ignore[no-untyped-def]
+    answer = solution.answer
+    assert answer["profit_today"] == pytest.approx(350_000)
+    # -450 / 2,775 over 4 / 42
+    assert answer["elasticity_small_business"] == pytest.approx(-1.7027, rel=1e-4)
+    assert answer["elasticity_accounting_firms"] == pytest.approx(-7 / 33)
+    assert answer["break_even_volume_change_15pct"] == pytest.approx(-1 / 6)
 
 
-def test_inelastic(answer: dict[str, float | None]) -> None:
-    assert answer["elasticity"] == pytest.approx(-0.8391, abs=1e-4)
-
-
-def test_unit_economics(answer: dict[str, float | None]) -> None:
-    # $96 margin / 3% churn = $3,200; / $1,800 = 1.78x; at $99: $75 / 0.03 / 1,800
-    assert answer["ltv_now"] == pytest.approx(3_200)
-    assert answer["ltv_to_cac_now"] == pytest.approx(3_200 / 1_800)
-    assert answer["ltv_to_cac_cut"] == pytest.approx(2_500 / 1_800)
-    assert answer["cac_payback_months"] == pytest.approx(18.75)
-
-
-def test_optimal_price(answer: dict[str, float | None]) -> None:
-    # Q = 800 - (10/3) P -> choke $240; (240 + 24) / 2 = $132; LTV/CAC = 108 / 0.03 / 1,800
-    assert answer["optimal_price"] == pytest.approx(132)
-    assert answer["ltv_to_cac_at_optimum"] == pytest.approx(2.0)
-
-
-def test_targets(answer: dict[str, float | None]) -> None:
-    # 96 / churn / 1,800 = 3 -> churn = 1.778%; 3,200 / CAC = 3 -> CAC = 1,066.67
-    assert answer["target_churn"] == pytest.approx(96 / 5_400, abs=1e-7)
-    assert answer["target_cac"] == pytest.approx(3_200 / 3, abs=1e-4)
-
-
-def test_margin_lost_on_base(answer: dict[str, float | None]) -> None:
-    assert answer["monthly_margin_lost_on_base"] == pytest.approx(105_000)
-
-
-def test_model() -> None:
-    assert ltv_to_cac({"price": 120, "cost_to_serve": 24, "churn": 0.03, "cac": 1_800}) == (
-        pytest.approx(3_200 / 1_800)
+def test_uniform_rise_is_a_wash(solution) -> None:  # type: ignore[no-untyped-def]
+    # Small businesses lose ~$38.3K, firms gain ~$38.8K
+    assert answer_of(solution, "uniform_rise_contribution_change") == pytest.approx(
+        501.23, abs=0.01
     )
 
 
-def test_narrative() -> None:
-    solution = get_case("3").solve()
+def test_pro_tier(solution) -> None:  # type: ignore[no-untyped-def]
+    # 8,000 x (1 - 0.2121 x 25%) x $40 - 8,000 x $30
+    assert answer_of(solution, "pro_tier_contribution_change") == pytest.approx(63_030.30, abs=0.01)
+    assert answer_of(solution, "recommended_profit") == pytest.approx(413_030.30, abs=0.01)
+    assert answer_of(solution, "small_business_cut_contribution_change") == pytest.approx(
+        5_124.32, abs=0.01
+    )
+
+
+def answer_of(solution, key: str) -> float:  # type: ignore[no-untyped-def]
+    value = solution.answer[key]
+    assert value is not None
+    return float(value)
+
+
+def test_text(solution) -> None:  # type: ignore[no-untyped-def]
     text = render_solution(solution)
-    assert "Do not cut the price" in text
-    assert "Price is the biggest single lever" in text
-    assert json.loads(json.dumps(solution.to_dict(), allow_nan=False))["case_id"] == "3"
+    assert "a wash" in text
+    assert solution.recommendation.startswith("Do not raise the price for everyone")
+    assert len(solution.steps) == 12
 
 
-def test_structure_is_mece() -> None:
+def test_metadata() -> None:
     case = get_case("3")
+    assert case.case_type == "Pricing"
     assert check_mece(case.structure()).ok
-    assert "$99" in render_case(case)
-    assert case.data()["test_signups_per_month"] == {"120": 400.0, "99": 470.0}
+    assert len(case.data()["segments"]) == 2
+    assert render_case(case).startswith("Case 3: LedgerLite")
+
+
+def test_json(solution) -> None:  # type: ignore[no-untyped-def]
+    assert json.loads(json.dumps(solution.to_dict()))["case_id"] == "3"

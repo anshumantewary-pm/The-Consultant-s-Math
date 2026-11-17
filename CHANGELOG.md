@@ -2,27 +2,54 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
-## [0.2.0] - 2026-11-18
+## [0.4.0] - 2026-11-18
+
+Combines the advanced-analytics work with 0.2.0 and 0.3.0 below.
 
 ### Added
 
 - Finance: `npv`, `irr` (bracketed bisection), simple and discounted payback, annuity PV, Gordon-growth perpetuity, `investment_appraisal` (NPV, IRR, profitability index, both paybacks, accept flag).
-- Pricing: arc elasticity, break-even volume for a price change, volume under constant elasticity, Lerner markup price, linear-demand optimal price.
+- Pricing: `optimal_price_linear` (best price on a straight-line demand curve through two observations) and `volume_after_price_change` under constant elasticity, alongside the 0.2.0 pricing calculators.
 - Unit economics: customer lifetime, LTV (optionally discounted), CAC payback, `unit_economics` with a 3x LTV/CAC health check.
 - Break-even: degree of operating leverage.
 - New `casemath.analysis` layer working on any model (a function of named inputs): one-way sensitivity, tornado, two-way data table, goal seek, weighted scenarios with expected value, Monte Carlo with Fixed / Uniform / Triangular / Normal inputs, percentiles, probability below a threshold and a histogram. Seeded and reproducible.
 - Built-in models (`profit`, `npv`, `ltv-cac`) for the CLI.
-- CLI: `invest`, `unit-econ`, `pricing change|elasticity|optimal`, `models`, `sensitivity`, `goalseek`, `simulate`.
-- Practice cases: Case 3 Lumen Analytics (SaaS pricing), Case 4 Northwind (investment under uncertainty).
-- Web app (GitHub Pages, Pyodide) with panels for every command, including the new ones.
+- CLI: `invest`, `unit-econ`, `optimal-price`, `models`, `sensitivity`, `goalseek`, `simulate`.
+- Practice cases: Case 5 Lumen Analytics (SaaS pricing), Case 6 Northwind (investment under uncertainty).
+- GitHub Pages web app (Pyodide) with panels for the calculators, analysis tools and all six cases.
 - `UnknownModelError` and a shared `UnknownNameError` base; `require_count` and `require_numbers` validators.
-- Test that enforces the layered import rules; test that the package and pyproject versions match.
-- Docs: frameworks guide sections on valuation, pricing, unit economics and uncertainty; Case 3 and 4 write-ups; architecture and PRD updated for v0.2.
+- Tests that enforce the layered import rules and keep the package and pyproject versions in step.
+- Docs: frameworks guide sections on valuation, unit economics and uncertainty; Case 5 and 6 write-ups; architecture and PRD updated.
 
 ### Changed
 
 - CI solves every registered case (no hard-coded list), adds a tornado to the job summary and smoke-tests `invest` and `simulate` from the built wheel.
-- Case 4's seeded solution is memoised, keeping the test suite fast.
+- Case 6's seeded solution is memoised, keeping the test suite fast.
+
+### Fixed
+
+- `casemath serve` on Windows: the server now asks for exclusive use of its port, so a port already in use is reported instead of silently shared (which also hung the test suite).
+
+## [0.3.0] - 2026-11-17
+
+### Added
+
+- `casemath serve`: a local web UI with every calculator, the four practice cases and the drill. Standard library only (`http.server`), localhost by default, `--open` to launch a browser.
+- `casemath.web.call(command, body)`: JSON API that maps a body onto CLI arguments and runs the CLI's own parser and handler, so web and terminal results never differ. `POST /api/check` grades a drill answer.
+
+## [0.2.0] - 2026-11-17
+
+### Added
+
+- Pricing calculators: arc (midpoint) price elasticity, break-even volume change for a price move, price-change impact under a linear elasticity, profit-maximising price for constant-elasticity demand.
+- M&A synergy calculators: `SynergyItem` (cost or revenue, margin, probability haircut), `synergy_schedule` with phase-in, integration costs and payback year, `synergy_value`, `acquisition_premium`.
+- Practice cases: Case 3 LedgerLite (pricing and segmentation), Case 4 Northfield Foods / Crestline Snacks (M&A synergies vs premium).
+- `casemath drill`: random practice questions across profit, break-even, share, sizing, growth, pricing and synergy topics. Seeded for repeatability, forgiving answer parsing, `--reveal` / `--json` answer keys.
+- CLI `price` and `synergy` commands.
+
+### Changed
+
+- CI solves all four cases in the job summary.
 
 ## [0.1.0] - 2026-11-15
 

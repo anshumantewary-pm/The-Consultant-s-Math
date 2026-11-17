@@ -3,28 +3,37 @@
 casemath is a layered library with a thin CLI on top. Each layer only imports from the layers below it.
 
 ```
-            ┌───────────────────────────────────────────────────┐
-  Interface │  cli.py  (argparse, text / --json)   web/ (Pyodide)│
-            └────────────────────────┬──────────────────────────┘
-                                     │
-            ┌────────────────────────▼──────────────────────────┐
-  Use cases │  cases/  1 profitability · 2 market entry ·        │
-            │          3 SaaS pricing  · 4 investment            │
-            └───────┬──────────────────────┬──────────────┬─────┘
-                    │                      │              │
-            ┌───────▼──────────────────────┴──┐           │
-  Analysis  │ analysis/  model · sensitivity  │           │
-            │  goal_seek · scenarios ·        │           │
-            │  distributions · montecarlo ·   │           │
-            │  models (built-in, for the CLI) │           │
-            └───────┬─────────────────────────┘           │
-                    │                                     │
-   ┌────────────────▼──────────┐ ┌────────────────────────▼─┐
+            ┌──────────────────────────────────────────────────────┐
+  Browser   │  src/casemath/web/  local UI: POST /api/<command>     │
+            │    api.call → cli parser + handler                    │
+            │  web/ (repo root)   GitHub Pages app: Pyodide runs    │
+            │    cli.main() in the browser                          │
+            └──────────────────────────┬───────────────────────────┘
+                                       │
+            ┌──────────────────────────▼───────────────────────────┐
+  Interface │  cli.py  (argparse, text / --json output)             │
+            └──────────────────────────┬───────────────────────────┘
+                                       │
+            ┌──────────────────────────▼───────────────────────────┐
+  Use cases │  cases/  1 profitability · 2 entry · 3 pricing ·      │
+            │          4 M&A synergy · 5 SaaS pricing · 6 investment│
+            │  drill.py  random questions, checked answers          │
+            └───────┬──────────────────────┬───────────────┬───────┘
+                    │                      │               │
+            ┌───────▼──────────────────────┴──┐            │
+  Analysis  │ analysis/  model · sensitivity  │            │
+            │  goal_seek · scenarios ·        │            │
+            │  distributions · montecarlo ·   │            │
+            │  models (built-in, for the CLI) │            │
+            └───────┬─────────────────────────┘            │
+                    │                                      │
+   ┌────────────────▼──────────┐ ┌─────────────────────────▼┐
    │ calculators/              │ │ frameworks/              │
    │  profitability · breakeven│ │  issue_tree.py  (Node,   │
    │  market_share · sizing    │ │   evaluate, render)      │
    │  growth · finance         │ │  mece.py  (checker)      │
-   │  pricing · unit_economics │ │  profitability.py        │
+   │  pricing · synergy        │ │  profitability.py        │
+   │  unit_economics           │ │                          │
    └────────────────┬──────────┘ └──────────┬───────────────┘
                     │                       │
             ┌───────▼───────────────────────▼──────────┐
@@ -42,9 +51,11 @@ casemath is a layered library with a thin CLI on top. Each layer only imports fr
 | Frameworks | `casemath.frameworks` | Issue tree model, MECE checker, the standard profitability tree | core |
 | Analysis | `casemath.analysis` | Model-agnostic tools: sensitivity (one-way, tornado, two-way), goal seek, scenarios, Monte Carlo. Only `models.py` (the CLI's built-in models) imports calculators | core (+ calculators in `models.py`) |
 | Cases | `casemath.cases` | Practice cases: data + a `solve()` that chains calculators and analysis | analysis, calculators, frameworks, core |
+| Drill | `casemath.drill` | Seeded question generators whose answer key comes from the calculators; `run_drill` takes `ask`/`say` callables | calculators, core |
 | Interface | `casemath.cli` | Parse arguments, call the library, print text or JSON | everything |
+| Web | `casemath.web` | Turn a JSON body into CLI arguments, run the CLI handler, serve the page | cli, drill |
 
-Calculators and frameworks do not import each other. The CLI is the only place that does I/O.
+Calculators and frameworks do not import each other. The CLI is the only place that does I/O: `drill.run_drill` asks and prints only through the `input`/`print` callables the CLI hands it.
 
 ### The Model abstraction
 

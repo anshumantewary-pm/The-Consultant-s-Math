@@ -77,65 +77,32 @@ class TestUnitEcon:
         assert "lasts forever" in err
 
 
-class TestPricing:
-    def test_change(self, capsys: Capture) -> None:
-        code, out, _ = run(capsys, "pricing", "change", "--change", "-0.1", "--margin", "0.3")
-        assert code == 0
-        assert "Volume needed      +50.0%" in out
-
-    def test_change_with_elasticity(self, capsys: Capture) -> None:
-        data = run_json(
-            capsys, "pricing", "change", "--change", "-0.1", "--margin", "0.3",
-            "--elasticity", "-2",
-        )  # fmt: skip
-        assert data["expected_volume_change"] == pytest.approx(0.9**-2 - 1)
-        _, out, _ = run(
-            capsys, "pricing", "change", "--change", "-0.1", "--margin", "0.3",
-            "--elasticity", "-6",
-        )  # fmt: skip
-        assert "worth it" in out
-
-    def test_destroys_value(self, capsys: Capture) -> None:
-        _, out, _ = run(
-            capsys, "pricing", "change", "--change", "-0.1", "--margin", "0.3",
-            "--elasticity", "-2",
-        )  # fmt: skip
-        assert "destroys value" in out
-
-    def test_elasticity(self, capsys: Capture) -> None:
-        _, out, _ = run(capsys, "pricing", "elasticity", "--points", "10,100,12,80")
-        assert "-1.22 (elastic)" in out
-        _, out, _ = run(capsys, "pricing", "elasticity", "--points", "10,100,12,98")
-        assert "(inelastic)" in out
-
-    def test_optimal_linear(self, capsys: Capture) -> None:
-        data = run_json(
-            capsys, "pricing", "optimal", "--points", "10,100,12,80", "--unit-cost", "4"
-        )
+class TestOptimalPrice:
+    def test_linear(self, capsys: Capture) -> None:
+        data = run_json(capsys, "optimal-price", "--points", "10,100,12,80", "--unit-cost", "4")
         assert data["price"] == pytest.approx(12)
-        _, out, _ = run(
-            capsys, "pricing", "optimal", "--points", "10,100,12,80", "--unit-cost", "4"
-        )
+        _, out, _ = run(capsys, "optimal-price", "--points", "10,100,12,80", "--unit-cost", "4")
         assert "Optimal price      $12.00" in out
 
-    def test_optimal_markup(self, capsys: Capture) -> None:
-        _, out, _ = run(capsys, "pricing", "optimal", "--unit-cost", "10", "--elasticity", "-3")
+    def test_markup(self, capsys: Capture) -> None:
+        _, out, _ = run(capsys, "optimal-price", "--unit-cost", "10", "--elasticity", "-3")
         assert "Optimal price      $15.00  (markup 50%)" in out
 
     @pytest.mark.parametrize(
         ("argv", "message"),
         [
-            (("pricing", "change", "--change", "-0.1"), "needs --margin"),
-            (("pricing", "optimal", "--elasticity", "-3"), "needs --unit-cost"),
-            (("pricing", "optimal", "--unit-cost", "4"), "--points P1,Q1,P2,Q2 or --elasticity"),
-            (("pricing", "elasticity"), "--points PRICE1"),
-            (("pricing", "elasticity", "--points", "1,2,3"), "four numbers"),
+            (("--unit-cost", "4", "--points", "1,2,3"), "four numbers"),
+            (("--unit-cost", "4", "--elasticity", "-0.5"), "elasticity must be < -1"),
         ],
     )
     def test_errors(self, capsys: Capture, argv: tuple[str, ...], message: str) -> None:
-        code, _, err = run(capsys, *argv)
+        code, _, err = run(capsys, "optimal-price", *argv)
         assert code == 2
         assert message in err
+
+    def test_needs_points_or_elasticity(self, capsys: Capture) -> None:
+        with pytest.raises(SystemExit):
+            main(["optimal-price", "--unit-cost", "4"])
 
 
 class TestModels:

@@ -1,6 +1,6 @@
-# Case 4: Northwind Logistics, automate the main warehouse?
+# Case 6: Northwind Logistics, automate the main warehouse?
 
-**Type:** Investment under uncertainty · **Run it:** `casemath case solve 4` · **Code:** [`case_04_automation_investment.py`](../../src/casemath/cases/case_04_automation_investment.py)
+**Type:** Investment under uncertainty · **Run it:** `casemath case solve 6` · **Code:** [`case_06_automation_investment.py`](../../src/casemath/cases/case_06_automation_investment.py)
 
 ## Prompt
 

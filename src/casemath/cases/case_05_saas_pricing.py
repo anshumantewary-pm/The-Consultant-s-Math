@@ -1,4 +1,4 @@
-"""Case 3: Lumen Analytics, should a SaaS company cut its price to grow?
+"""Case 5: Lumen Analytics, should a SaaS company cut its price to grow?
 
 Skills: price elasticity, break-even volume for a price move, customer unit
 economics (LTV, CAC payback, LTV/CAC), the profit-maximising price, tornado
@@ -13,9 +13,9 @@ from casemath.analysis.goal_seek import goal_seek
 from casemath.analysis.model import Inputs
 from casemath.analysis.sensitivity import tornado
 from casemath.calculators.pricing import (
-    arc_elasticity,
-    breakeven_volume_change,
+    break_even_volume_change,
     optimal_price_linear,
+    price_elasticity,
 )
 from casemath.calculators.unit_economics import HEALTHY_LTV_TO_CAC, unit_economics
 from casemath.cases.base import Case, Solution
@@ -41,7 +41,7 @@ def ltv_to_cac(x: Inputs) -> float:
 
 
 class SaasPricingCase(Case):
-    id = "3"
+    id = "5"
     title = "Lumen Analytics: cut the price to grow?"
     case_type = "Pricing"
     skills = (
@@ -107,9 +107,9 @@ Exhibits: price, cost to serve, churn, customer acquisition cost and the test.
         margin_now = (CURRENT_PRICE - COST_TO_SERVE) / CURRENT_PRICE
         margin_cut = (PROPOSED_PRICE - COST_TO_SERVE) / PROPOSED_PRICE
 
-        needed = breakeven_volume_change(price_change, margin_now)
+        needed = break_even_volume_change(CURRENT_PRICE, COST_TO_SERVE, price_change)
         observed = TEST_SIGNUPS[PROPOSED_PRICE] / TEST_SIGNUPS[CURRENT_PRICE] - 1
-        elasticity = arc_elasticity(
+        elasticity = price_elasticity(
             CURRENT_PRICE, TEST_SIGNUPS[CURRENT_PRICE], PROPOSED_PRICE, TEST_SIGNUPS[PROPOSED_PRICE]
         )
 

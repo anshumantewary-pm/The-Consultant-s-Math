@@ -142,6 +142,8 @@ jobs:
           /tmp/smoke/bin/casemath case solve 1 --json > /dev/null
           /tmp/smoke/bin/casemath invest --rate 0.1 -1000 500 500 500
           /tmp/smoke/bin/casemath simulate profit --dist units=tri:20000:40000:45000 --runs 500 > /dev/null
+          # The web UI's page is package data; make sure the wheel ships it.
+          /tmp/smoke/bin/python -c "from casemath.web.server import page; assert b'<title>casemath</title>' in page()"
       - uses: actions/upload-artifact@v4
         with:
           name: dist

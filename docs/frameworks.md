@@ -104,15 +104,34 @@ Two uses that come up constantly:
 | HHI | Σ (share in %)² | Concentration: below 1,000 fragmented, 1,000–1,800 moderate, above 1,800 high |
 | Projected share | Share × ((1 + g_company) / (1 + g_market))ⁿ | You gain share only by outgrowing the market |
 
-## 4. Presenting the answer
+## 4. Pricing: will a price change pay for itself?
 
-Use the pyramid: answer first, then support.
+A price rise gains margin on every unit you keep and loses the margin on every unit that leaves. The break-even question is how many you can lose.
 
-> **Fix Juice first.** Juice unit costs rose 30% and explain 73% of the profit decline. The Energy Drinks price cut explains most of the rest: it cost $2.3M and the extra volume won back only $1.2M. Bottled Tea is healthy. Next step: price Juice to about $2.95 or renegotiate fruit contracts.
+```
+Arc elasticity          = (ΔQ / avg Q) / (ΔP / avg P)          midpoints, so direction does not matter
+Break-even volume change = −ΔP% / (CM% + ΔP%)                    e.g. −15% / (75% + 15%) = −16.7%
+Expected volume change   = elasticity × ΔP%                      linear; fine for moderate moves
+Profit-maximising price  = VC × e / (1 + e)                      constant elasticity, needs e < −1
+```
 
-Every number in that paragraph comes out of `casemath case solve 1`.
+- **High-margin businesses can afford to lose a lot of volume** on a rise, and must gain a lot on a cut. At a 30% margin a 10% cut needs 50% more volume.
+- **Always split elasticity by segment.** An average of an elastic and an inelastic group can make a rise look neutral when the right answer is to raise the price for one group only. Case 3 uses this.
+- **Do not extrapolate far beyond the tested price.** Roll out in stages and watch churn.
 
-## 5. Valuing an investment
+## 5. M&A synergies: is the premium justified?
+
+```
+Premium              = Offer value − Standalone value
+Synergy value        = Run-rate profit synergies × multiple − one-off integration costs
+Walk-away price      = Standalone value + (risked) synergy value
+```
+
+- **Count revenue synergies at their profit margin**, and haircut them: cost synergies are in management's control, cross-selling is not.
+- **Phase synergies in** (30% / 70% / 100% is typical) and check when cumulative synergies cover integration costs.
+- **If cost synergies alone cover the premium, the deal is robust.** If not, close the gap with price or an earn-out. Case 4 uses this.
+
+## 6. Valuing an investment
 
 Payback ignores the time value of money and everything after the payback date. For anything with a multi-year life, use NPV.
 
@@ -128,21 +147,15 @@ Perpetuity         = CF / (r − g)                  (Gordon growth, needs r > g
 - **Discounted payback** is always later than simple payback; if a board asks for payback, give both.
 - casemath's `irr` brackets the root and bisects, so it never diverges, and it returns the lowest IRR when there are several.
 
-## 6. Pricing
+## 7. Finding the best price
 
-**Elasticity** = %Δ quantity / %Δ price. Below −1 is elastic (revenue falls when price rises); between −1 and 0 is inelastic. Use the *arc* (midpoint) version on two observed points so the answer does not depend on which point you call "before".
-
-**The volume a price move needs** to keep total contribution flat:
-
-```
-Volume change needed = −ΔP / (CM + ΔP)        ΔP and CM as fractions of today's price
-```
-
-A 10% cut at a 30% contribution margin needs **+50%** volume. At an 80% margin a 17.5% cut needs +28%. Compare that number with the elasticity you actually observe before agreeing to any cut. Case 3 turns on this.
+Section 4 asks whether a given price move pays. The next question is which price is best.
 
 **The profit-maximising price.** With straight-line demand through two points, P* sits halfway between unit cost and the choke price (where demand hits zero). With constant elasticity e < −1, the Lerner rule gives P* = c × e / (1 + e).
 
-## 7. Customer unit economics
+In Case 5 the two test points imply a profit-maximising price of $132, above today's $120, which is why the answer to "should we cut?" becomes "test a rise". A cut needs volume (here +28% at an 80% margin) that inelastic demand will not supply.
+
+## 8. Customer unit economics
 
 ```
 Lifetime (periods) = 1 / churn
@@ -152,7 +165,7 @@ CAC payback        = CAC / (revenue × gross margin)
 
 Rules of thumb: **LTV/CAC ≥ 3×**, and CAC repaid well inside the average customer's lifetime. Because LTV divides by churn, a small improvement in retention moves LTV more than almost anything else. Run a tornado before arguing about price.
 
-## 8. Deciding under uncertainty
+## 9. Deciding under uncertainty
 
 A point estimate hides the risk. Four tools, from cheapest to richest:
 
@@ -165,5 +178,13 @@ A point estimate hides the risk. Four tools, from cheapest to richest:
 
 Two habits that separate a strong answer:
 
-1. **Mean ≠ base case.** When the ranges are skewed (savings that can fall a lot but rise a little), the simulated mean sits below the deterministic answer. Case 4 shows a $3.5M base-case NPV with a $1.6M simulated mean.
+1. **Mean ≠ base case.** When the ranges are skewed (savings that can fall a lot but rise a little), the simulated mean sits below the deterministic answer. Case 6 shows a $3.5M base-case NPV with a $1.6M simulated mean.
 2. **Turn risk into an action.** "21% chance of loss" is a finding; "we need 7.3% off the quote to get that under 10%" is a recommendation. Goal seek works on a simulated probability as well as on a single number, as long as the seed is fixed.
+
+## 10. Presenting the answer
+
+Use the pyramid: answer first, then support.
+
+> **Fix Juice first.** Juice unit costs rose 30% and explain 73% of the profit decline. The Energy Drinks price cut explains most of the rest: it cost $2.3M and the extra volume won back only $1.2M. Bottled Tea is healthy. Next step: price Juice to about $2.95 or renegotiate fruit contracts.
+
+Every number in that paragraph comes out of `casemath case solve 1`.

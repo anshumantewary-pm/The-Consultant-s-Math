@@ -13,6 +13,8 @@ ALLOWED = {
     "frameworks": {"core", "frameworks"},
     "analysis": {"core", "analysis"},
     "cases": {"core", "calculators", "frameworks", "analysis", "cases"},
+    # Interface: the local web UI sits on top of the CLI, like cli.py itself.
+    "web": {"core", "calculators", "frameworks", "analysis", "cases", "cli", "drill", "web"},
 }
 # The CLI's built-in models wrap calculators by design.
 EXCEPTIONS = {("analysis", "models.py"): {"calculators"}}
@@ -30,13 +32,15 @@ def casemath_imports(path: Path) -> set[str]:
             parts = name.split(".")
             if parts[0] == "casemath" and len(parts) > 1:
                 layers.add(parts[1])
+            elif parts == ["casemath"]:
+                layers.add("__init__")  # e.g. ``from casemath import __version__``
     return layers
 
 
 @pytest.mark.parametrize("layer", sorted(ALLOWED))
 def test_layer_imports_only_downward(layer: str) -> None:
     for path in sorted((PACKAGE / layer).glob("*.py")):
-        allowed = ALLOWED[layer] | EXCEPTIONS.get((layer, path.name), set())
+        allowed = ALLOWED[layer] | {"__init__"} | EXCEPTIONS.get((layer, path.name), set())
         illegal = casemath_imports(path) - allowed
         assert not illegal, f"{layer}/{path.name} imports {sorted(illegal)}"
 
@@ -44,3 +48,8 @@ def test_layer_imports_only_downward(layer: str) -> None:
 def test_every_layer_is_covered() -> None:
     packages = {p.name for p in PACKAGE.iterdir() if (p / "__init__.py").exists()}
     assert packages == set(ALLOWED)
+
+
+def test_drill_uses_only_core_and_calculators() -> None:
+    # drill.py is a top-level module: question generators built on the calculators.
+    assert casemath_imports(PACKAGE / "drill.py") <= {"core", "calculators"}

@@ -1,6 +1,6 @@
-# Case 3: Lumen Analytics, cut the price to grow?
+# Case 5: Lumen Analytics, cut the price to grow?
 
-**Type:** Pricing · **Run it:** `casemath case solve 3` · **Code:** [`case_03_saas_pricing.py`](../../src/casemath/cases/case_03_saas_pricing.py)
+**Type:** Pricing · **Run it:** `casemath case solve 5` · **Code:** [`case_05_saas_pricing.py`](../../src/casemath/cases/case_05_saas_pricing.py)
 
 ## Prompt
 

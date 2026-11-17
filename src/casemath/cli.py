@@ -2,6 +2,8 @@
 
 Every handler takes parsed arguments and returns an ``Output``: the text to
 print and the data to emit with ``--json``. Handlers never print; ``main`` does.
+The two exceptions are interactive by nature: ``drill`` (without ``--reveal``)
+and ``serve``, which prints its URL and then runs until Ctrl-C.
 """
 
 from __future__ import annotations
@@ -26,27 +28,28 @@ from casemath.analysis import (
 )
 from casemath.analysis.montecarlo import render_histogram
 from casemath.calculators import (
-    arc_elasticity,
     break_even_analysis,
-    breakeven_volume_change,
     hhi,
     investment_appraisal,
     market_share,
-    markup_price,
     optimal_price_linear,
+    price_change_impact,
+    price_elasticity,
     profit_bridge,
+    profit_maximising_price,
     profit_statement,
     relative_market_share,
     share_table,
+    synergy_value,
     top_down,
     unit_economics,
     units_for_target_profit,
-    volume_after_price_change,
 )
 from casemath.cases import get_case, list_cases, render_case, render_solution
 from casemath.cases.base import format_step
 from casemath.core.errors import CaseMathError, ValidationError
 from casemath.core.formatting import fmt_money, fmt_number, fmt_pct, fmt_signed_money
+from casemath.drill import TOPICS, generate, run_drill
 from casemath.frameworks import check_mece, profitability_tree, render
 
 
@@ -238,34 +241,7 @@ def _unit_econ(args: argparse.Namespace) -> Output:
     return Output("\n".join(lines), {**ue.to_dict(), "healthy": ue.healthy})
 
 
-def _need(args: argparse.Namespace, *names: str) -> None:
-    missing = [f"--{n.replace('_', '-')}" for n in names if getattr(args, n) is None]
-    if missing:
-        raise ValidationError(f"{args.command} {args.action} needs {' and '.join(missing)}")
-
-
-def _pricing(args: argparse.Namespace) -> Output:
-    _need(args, *{"change": ("change", "margin"), "optimal": ("unit_cost",)}.get(args.action, ()))
-    if args.action == "change":
-        needed = breakeven_volume_change(args.change, args.margin)
-        data: dict[str, float] = {"breakeven_volume_change": needed}
-        lines = [
-            f"Price change       {args.change:+.1%}",
-            f"Contribution margin {fmt_pct(args.margin)}",
-            f"Volume needed      {needed:+.1%} to keep total contribution flat",
-        ]
-        if args.elasticity is not None:
-            expected = volume_after_price_change(1, args.change, args.elasticity) - 1
-            data["expected_volume_change"] = expected
-            verdict = "worth it" if (expected >= needed) else "destroys value"
-            lines.append(
-                f"Expected volume    {expected:+.1%} at elasticity {args.elasticity:g}: {verdict}"
-            )
-        return Output("\n".join(lines), data)
-    if args.action == "elasticity":
-        e = arc_elasticity(*_points(args.points))
-        kind = "elastic" if e < -1 else "inelastic"
-        return Output(f"Arc elasticity     {e:.2f} ({kind})", {"elasticity": e})
+def _optimal_price(args: argparse.Namespace) -> Output:
     if args.points is not None:
         opt = optimal_price_linear(*_points(args.points), unit_cost=args.unit_cost)
         lines = [
@@ -278,8 +254,8 @@ def _pricing(args: argparse.Namespace) -> Output:
         ]
         return Output("\n".join(lines), opt.to_dict())
     if args.elasticity is None:
-        raise ValidationError("pricing optimal needs --points P1,Q1,P2,Q2 or --elasticity")
-    price = markup_price(args.unit_cost, args.elasticity)
+        raise ValidationError("optimal-price needs --points P1,Q1,P2,Q2 or --elasticity")
+    price = profit_maximising_price(args.unit_cost, args.elasticity)
     return Output(
         f"Optimal price      {fmt_money(price)}  (markup {price / args.unit_cost - 1:.0%})",
         {"price": price, "elasticity": args.elasticity, "unit_cost": args.unit_cost},
@@ -384,13 +360,98 @@ def _simulate(args: argparse.Namespace) -> Output:
     return Output("\n".join(lines), sim.to_dict())
 
 
+def _price(args: argparse.Namespace) -> Output:
+    if args.elasticity is None:
+        if args.test is None:
+            raise ValidationError("give --elasticity, or --test OLD_UNITS,NEW_UNITS to measure it")
+        parts = args.test.split(",")
+        try:
+            old_units, new_units = (float(p) for p in parts)
+        except ValueError:
+            raise ValidationError(
+                f"--test must be OLD_UNITS,NEW_UNITS, got {args.test!r}"
+            ) from None
+        elasticity = price_elasticity(args.price, old_units, args.new_price, new_units)
+    else:
+        elasticity = args.elasticity
+    c = price_change_impact(
+        args.price, args.units, args.variable_cost, args.new_price, elasticity, args.fixed_costs
+    )
+    verdict = "pays off" if c.pays_off else "does not pay off"
+    text = "\n".join(
+        [
+            f"Price change       {fmt_pct(c.price_change)}",
+            f"Elasticity         {c.elasticity:.2f}",
+            f"Expected volume    {fmt_pct(c.expected_volume_change)}",
+            f"Break-even volume  {fmt_pct(c.break_even_volume_change)}",
+            f"Profit before      {fmt_money(c.before.profit)}",
+            f"Profit after       {fmt_money(c.after.profit)}",
+            f"Change             {fmt_signed_money(c.profit_change)}  ({verdict})",
+        ]
+    )
+    return Output(text, {**c.to_dict(), "pays_off": c.pays_off})
+
+
+def _synergy(args: argparse.Namespace) -> Output:
+    value = synergy_value(args.run_rate, args.multiple, args.one_off)
+    data: dict[str, float | bool] = {"synergy_value": value}
+    lines = [f"Synergy value      {fmt_money(value)}"]
+    if args.premium is not None:
+        headroom = value - args.premium
+        data |= {"premium": args.premium, "headroom": headroom, "justified": headroom >= 0}
+        verdict = "justified" if headroom >= 0 else "not justified by synergies"
+        lines.append(f"Headroom vs premium {fmt_signed_money(headroom)}  ({verdict})")
+    return Output("\n".join(lines), data)
+
+
+def _drill(args: argparse.Namespace) -> Output:
+    questions = generate(args.topic, args.count, args.seed)
+    data = [q.to_dict() for q in questions]
+    if args.reveal or args.json:
+        lines = []
+        for i, q in enumerate(questions, start=1):
+            lines += [f"Q{i} [{q.topic}] {q.prompt}", f"   {q.shown_answer()}  ({q.explanation})"]
+        return Output("\n".join(lines), data)
+    score = run_drill(questions, input, print)
+    text = f"\nScore: {score.correct}/{score.asked}"
+    if score.asked:
+        text += f" ({fmt_pct(score.accuracy, 0)})"
+    return Output(text, data)
+
+
+def _serve(args: argparse.Namespace) -> Output:
+    from casemath.web.server import make_server  # web imports cli, so import late
+
+    try:
+        server = make_server(args.host, args.port, verbose=args.verbose)
+    except OSError as error:
+        raise ValidationError(f"cannot listen on {args.host}:{args.port}: {error}") from None
+    shown_host = "localhost" if args.host in ("127.0.0.1", "0.0.0.0", "") else args.host
+    url = f"http://{shown_host}:{server.server_port}/"
+    print(f"casemath web UI on {url}  (Ctrl-C to stop)", flush=True)
+    if args.open:
+        import webbrowser
+
+        webbrowser.open(url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+    return Output("stopped", {"url": url})
+
+
 # ---------------------------------------------------------------- parser
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="casemath",
-        description="Consulting case math: profitability, break-even, market share, sizing.",
+        description=(
+            "Consulting case math: profitability, break-even, market share, sizing, "
+            "pricing and M&A synergies."
+        ),
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     common = argparse.ArgumentParser(add_help=False)
@@ -450,15 +511,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--cac", type=float, required=True, help="cost to acquire one customer")
     p.add_argument("--discount-rate", type=float, default=0.0, help="per period (default 0)")
 
-    p = add("pricing", _pricing, "price moves, elasticity and the profit-maximising price")
-    p.add_argument("action", choices=["change", "elasticity", "optimal"])
-    p.add_argument(
-        "--change", type=float, help="change: price change as a fraction, -0.1 = 10%% cut"
-    )
-    p.add_argument("--margin", type=float, help="change: contribution margin as a fraction")
-    p.add_argument("--elasticity", type=float, help="change / optimal: price elasticity, e.g. -2")
-    p.add_argument("--points", metavar="P1,Q1,P2,Q2", help="elasticity / optimal: two observations")
-    p.add_argument("--unit-cost", type=float, help="optimal: variable cost per unit")
+    p = add("optimal-price", _optimal_price, "profit-maximising price (two points or elasticity)")
+    p.add_argument("--unit-cost", type=float, required=True, help="variable cost per unit")
+    group = p.add_mutually_exclusive_group(required=True)
+    group.add_argument("--points", metavar="P1,Q1,P2,Q2", help="two observed price/volume points")
+    group.add_argument("--elasticity", type=float, help="constant elasticity, below -1")
 
     add("models", _models, "list the built-in models used by sensitivity, goalseek and simulate")
 
@@ -499,6 +556,35 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--variable-cost", type=float)
     p.add_argument("--fixed-costs", type=float)
     p.add_argument("--hints", action="store_true", help="show the question to ask at each node")
+
+    p = add("price", _price, "will a price change pay off? elasticity and break-even volume")
+    p.add_argument("--price", type=float, required=True, help="current price")
+    p.add_argument("--new-price", type=float, required=True)
+    p.add_argument("--units", type=float, required=True, help="current volume")
+    p.add_argument("--variable-cost", type=float, required=True, help="per unit")
+    p.add_argument("--fixed-costs", type=float, default=0.0)
+    group = p.add_mutually_exclusive_group()
+    group.add_argument("--elasticity", type=float, help="e.g. -1.5")
+    group.add_argument("--test", metavar="OLD_UNITS,NEW_UNITS",
+                       help="measure elasticity from a test at --price vs --new-price")  # fmt: skip
+
+    p = add("synergy", _synergy, "value of M&A synergies vs the premium paid")
+    p.add_argument("--run-rate", type=float, required=True, help="annual profit synergies")
+    p.add_argument("--multiple", type=float, required=True, help="valuation multiple, e.g. 8")
+    p.add_argument("--one-off", type=float, default=0.0, help="one-off integration costs")
+    p.add_argument("--premium", type=float, help="premium over standalone value")
+
+    p = add("drill", _drill, "practice questions with checked answers")
+    p.add_argument("--topic", choices=list(TOPICS), help="default: a mix of every topic")
+    p.add_argument("--count", type=int, default=5)
+    p.add_argument("--seed", type=int, help="same seed, same questions")
+    p.add_argument("--reveal", action="store_true", help="print questions with answers, no quiz")
+
+    p = add("serve", _serve, "run the local web UI (calculators, cases, drill)")
+    p.add_argument("--host", default="127.0.0.1", help="default: localhost only")
+    p.add_argument("--port", type=int, default=8765, help="0 picks a free port")
+    p.add_argument("--open", action="store_true", help="open it in your browser")
+    p.add_argument("--verbose", action="store_true", help="log each request")
 
     p = add("case", _case, "list, show or solve the practice cases")
     p.add_argument("action", choices=["list", "show", "solve"])

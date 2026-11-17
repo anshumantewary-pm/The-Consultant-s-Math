@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Owner | Anshuman Tewary |
-| Status | v0.2 in review (advanced analytics) |
+| Status | v0.4 in review (advanced analytics merged with v0.3) |
 | Last updated | 2026-11-18 |
 
 ## 1. Problem
@@ -22,13 +22,13 @@ A small, dependency-free Python library and CLI that:
 
 1. Does the standard case calculations correctly and explains each step.
 2. Builds a profitability issue tree and checks whether a structure is MECE.
-3. Ships two fully solved practice cases that use the calculators end to end.
+3. Ships fully solved practice cases that use the calculators end to end (two in v0.1, four in v0.2).
 4. Is tested and checked by CI on every push, so the numbers can be trusted.
 
 ### Non-goals
 
-- No server-side app: the web front end runs the package in the browser (Pyodide) and stores nothing.
-- No full financial modelling: v0.2 adds NPV/IRR on a cash-flow list, but no three-statement models, tax or working capital.
+- No hosted server. The local UI (`casemath serve`) runs on your machine, and the GitHub Pages app runs the package in the browser (Pyodide); neither has accounts or storage.
+- No full financial modelling: v0.4 adds NPV/IRR on a cash-flow list, but no three-statement models, tax or working capital.
 - No automatic judgement of *qualitative* MECE quality. The checker flags structural and numeric faults; a human still decides whether "Channel" and "Region" are a sensible split.
 
 ## 3. Users
@@ -47,6 +47,9 @@ A small, dependency-free Python library and CLI that:
 - **US-4** As an analyst, I compute market share, relative market share, market concentration (HHI) and the share needed to hit a revenue target.
 - **US-5** As an analyst, I size a market top-down or bottom-up.
 - **US-6** As a candidate, I print the standard profitability tree and run a MECE check on a tree with numbers.
+- **US-9** As a candidate, I enter a price change and an elasticity (or a test result) and see whether it pays off and how much volume I can afford to lose.
+- **US-10** As an analyst, I value a list of cost and revenue synergies, phase them in, and compare their value with the premium being paid.
+- **US-11** As a learner, I get random practice questions, type answers the way I would say them ("$1.2M", "25%"), and am told if I am right and why.
 - **US-7** As a learner, I list the practice cases, read the prompt and print the full solution with steps and a recommendation.
 - **US-8** As any user, I get a clear error (not a crash or a silent wrong answer) when inputs make no sense, such as price below unit cost in a break-even.
 
@@ -64,27 +67,32 @@ A small, dependency-free Python library and CLI that:
 | FR-8 | MECE checker: flags single-child splits, duplicate sibling labels, and parts that do not reconcile to a stated total | US-6 |
 | FR-9 | Case registry with two solved cases; each solution has ordered steps and a recommendation | US-7 |
 | FR-10 | CLI `casemath` with subcommands `profit`, `bridge`, `breakeven`, `share`, `hhi`, `size`, `tree`, `case`; every command supports `--json` | All |
+| FR-12 | Pricing: arc elasticity, break-even volume change, price-change impact under a linear elasticity, constant-elasticity markup rule | US-9 |
+| FR-13 | Synergies: cost and revenue items with margin and probability haircut, phase-in schedule with integration costs and payback year, value at a multiple, premium % | US-10 |
+| FR-14 | Cases 3 (pricing) and 4 (M&A synergy) in the registry, same rules as FR-9 | US-7 |
+| FR-15 | `casemath drill`: seeded questions across seven topics, answer parsing (`$`, `K/M/B`, `%`, `x`), tolerance check, `--reveal` and `--json` answer keys; CLI adds `price` and `synergy` | US-11 |
+| FR-16 | `casemath serve`: local web UI (calculators, cases, drill) over a JSON API that reuses the CLI parser and handlers; stdlib only, binds to localhost by default, 64 KB body limit | All |
 | FR-11 | All invalid inputs raise `casemath.ValidationError` (a `ValueError`); the CLI turns these into a one-line message and exit code 2 | US-8 |
 
-### v0.2: advanced analytics
+### v0.4: advanced analytics
 
 User stories:
 
-- **US-9** As an analyst, I enter a cash-flow series and get NPV, IRR, profitability index, simple and discounted payback.
-- **US-10** As a candidate, I check whether a price change pays for itself, estimate elasticity from two data points and find the profit-maximising price.
-- **US-11** As an analyst, I compute LTV, CAC payback and LTV/CAC with a health verdict.
-- **US-12** As an analyst, I see which assumption moves the answer most (tornado), solve for the value of an input that hits a target (goal seek), compare weighted scenarios, and simulate uncertain inputs to get a probability of loss.
+- **US-12** As an analyst, I enter a cash-flow series and get NPV, IRR, profitability index, simple and discounted payback.
+- **US-13** As a candidate, I check whether a price change pays for itself, estimate elasticity from two data points and find the profit-maximising price.
+- **US-14** As an analyst, I compute LTV, CAC payback and LTV/CAC with a health verdict.
+- **US-15** As an analyst, I see which assumption moves the answer most (tornado), solve for the value of an input that hits a target (goal seek), compare weighted scenarios, and simulate uncertain inputs to get a probability of loss.
 
 | ID | Requirement | Story |
 |---|---|---|
-| FR-12 | `npv`, `irr` (bracketed bisection, never diverges), `discounted_payback`, `simple_payback`, `annuity_pv`, `perpetuity`, `investment_appraisal` | US-9 |
-| FR-13 | `arc_elasticity`, `breakeven_volume_change`, `volume_after_price_change`, `markup_price` (Lerner), `optimal_price_linear` | US-10 |
-| FR-14 | `lifetime_value` (optionally discounted), `cac_payback`, `unit_economics` with a 3x LTV/CAC health check | US-11 |
-| FR-15 | `analysis` package working on any `Model` (function of named inputs): `one_way`, `tornado`, `two_way`, `goal_seek`, `compare_scenarios`, `simulate` with Fixed / Uniform / Triangular / Normal inputs, histogram | US-12 |
-| FR-16 | Simulations are reproducible: a fixed default seed, and the same seed always gives the same result | US-12 |
-| FR-17 | CLI: `invest`, `unit-econ`, `pricing`, `models`, `sensitivity`, `goalseek`, `simulate`, all with `--json` | US-9 to US-12 |
-| FR-18 | Case 3 (SaaS pricing) and Case 4 (investment under uncertainty) solved end to end with the new tools | US-7 |
-| FR-19 | Web app panels for every v0.2 command | All |
+| FR-17 | `npv`, `irr` (bracketed bisection, never diverges), `discounted_payback`, `simple_payback`, `annuity_pv`, `perpetuity`, `investment_appraisal` | US-12 |
+| FR-18 | `optimal_price_linear` (best price on a demand line fitted through two points) and `volume_after_price_change`, on top of the v0.2 pricing calculators | US-13 |
+| FR-19 | `lifetime_value` (optionally discounted), `cac_payback`, `unit_economics` with a 3x LTV/CAC health check | US-14 |
+| FR-20 | `analysis` package working on any `Model` (function of named inputs): `one_way`, `tornado`, `two_way`, `goal_seek`, `compare_scenarios`, `simulate` with Fixed / Uniform / Triangular / Normal inputs, histogram | US-15 |
+| FR-21 | Simulations are reproducible: a fixed default seed, and the same seed always gives the same result | US-15 |
+| FR-22 | CLI: `invest`, `unit-econ`, `optimal-price`, `models`, `sensitivity`, `goalseek`, `simulate`, all with `--json` | US-12 to US-15 |
+| FR-23 | Case 5 (SaaS pricing) and Case 6 (investment under uncertainty) solved end to end with the new tools | US-7 |
+| FR-24 | GitHub Pages web app (Pyodide) with panels for the calculators, analysis tools and all six cases | All |
 
 ## 6. Non-functional requirements
 
@@ -111,8 +119,9 @@ User stories:
 | Version | Scope |
 |---|---|
 | v0.1 | FR-1 to FR-11, two cases, CI, docs |
-| **v0.2** (this release) | FR-12 to FR-19: finance, pricing, unit economics, the analysis layer, Cases 3 and 4, web panels |
-| v0.3 | `casemath drill` mode that generates random practice questions and checks answers; an M&A synergy case |
+| v0.2 | Pricing and synergy calculators, Case 3 (pricing), Case 4 (M&A synergy), `casemath drill`, CLI `price` and `synergy` (FR-12 to FR-15) |
+| v0.3 | Local web front end on top of the CLI's JSON output (FR-16) |
+| **v0.4** (this release) | FR-17 to FR-24: finance, unit economics, optimal price, the analysis layer, Cases 5 and 6, GitHub Pages app |
 
 ## 9. Risks
 
