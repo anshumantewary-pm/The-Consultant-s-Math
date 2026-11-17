@@ -4,10 +4,12 @@ from casemath.cases.base import Case, Solution, render_case, render_solution
 from casemath.cases.case_01_profit_decline import ProfitDeclineCase
 from casemath.cases.case_02_market_entry import MarketEntryCase
 from casemath.cases.case_03_saas_pricing import SaasPricingCase
+from casemath.cases.case_04_automation_investment import AutomationInvestmentCase
 from casemath.core.errors import UnknownCaseError
 
 _REGISTRY: dict[str, type[Case]] = {
-    case.id: case for case in (ProfitDeclineCase, MarketEntryCase, SaasPricingCase)
+    case.id: case
+    for case in (ProfitDeclineCase, MarketEntryCase, SaasPricingCase, AutomationInvestmentCase)
 }
 
 
@@ -24,6 +26,7 @@ def get_case(case_id: str) -> Case:
 
 
 __all__ = [
+    "AutomationInvestmentCase",
     "Case",
     "MarketEntryCase",
     "ProfitDeclineCase",
