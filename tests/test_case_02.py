@@ -67,7 +67,7 @@ def test_structure_and_registry() -> None:
     assert check_mece(case.structure()).ok
     assert "fleet_anchor" in case.data()
     assert "Should VoltWay enter?" in render_case(case)
-    assert [c.id for c in list_cases()] == ["1", "2"]
+    assert [c.id for c in list_cases()] == ["1", "2", "3", "4"]
     with pytest.raises(UnknownCaseError, match="available: 1, 2"):
         get_case("9")
 
