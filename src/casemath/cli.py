@@ -2,6 +2,8 @@
 
 Every handler takes parsed arguments and returns an ``Output``: the text to
 print and the data to emit with ``--json``. Handlers never print; ``main`` does.
+The two exceptions are interactive by nature: ``drill`` (without ``--reveal``)
+and ``serve``, which prints its URL and then runs until Ctrl-C.
 """
 
 from __future__ import annotations
@@ -230,6 +232,29 @@ def _drill(args: argparse.Namespace) -> Output:
     return Output(text, data)
 
 
+def _serve(args: argparse.Namespace) -> Output:
+    from casemath.web.server import make_server  # web imports cli, so import late
+
+    try:
+        server = make_server(args.host, args.port, verbose=args.verbose)
+    except OSError as error:
+        raise ValidationError(f"cannot listen on {args.host}:{args.port}: {error}") from None
+    shown_host = "localhost" if args.host in ("127.0.0.1", "0.0.0.0", "") else args.host
+    url = f"http://{shown_host}:{server.server_port}/"
+    print(f"casemath web UI on {url}  (Ctrl-C to stop)", flush=True)
+    if args.open:
+        import webbrowser
+
+        webbrowser.open(url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+    return Output("stopped", {"url": url})
+
+
 # ---------------------------------------------------------------- parser
 
 
@@ -311,6 +336,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--count", type=int, default=5)
     p.add_argument("--seed", type=int, help="same seed, same questions")
     p.add_argument("--reveal", action="store_true", help="print questions with answers, no quiz")
+
+    p = add("serve", _serve, "run the local web UI (calculators, cases, drill)")
+    p.add_argument("--host", default="127.0.0.1", help="default: localhost only")
+    p.add_argument("--port", type=int, default=8765, help="0 picks a free port")
+    p.add_argument("--open", action="store_true", help="open it in your browser")
+    p.add_argument("--verbose", action="store_true", help="log each request")
 
     p = add("case", _case, "list, show or solve the practice cases")
     p.add_argument("action", choices=["list", "show", "solve"])
