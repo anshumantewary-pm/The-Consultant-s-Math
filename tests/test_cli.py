@@ -5,6 +5,7 @@ import sys
 import pytest
 
 from casemath import __version__
+from casemath.cases import list_cases
 from casemath.cli import main
 
 
@@ -158,7 +159,7 @@ class TestCase:
     def test_list_json(self, capsys: pytest.CaptureFixture[str]) -> None:
         data = run_json(capsys, "case", "list")
         assert isinstance(data, list)
-        assert [c["id"] for c in data] == ["1", "2"]
+        assert [c["id"] for c in data] == [c.id for c in list_cases()]
 
     def test_show(self, capsys: pytest.CaptureFixture[str]) -> None:
         code, out, _ = run(capsys, "case", "show", "2")
@@ -170,7 +171,7 @@ class TestCase:
         assert isinstance(data, dict)
         assert len(data["data"]["year_2"]) == 3
 
-    @pytest.mark.parametrize("case_id", ["1", "2"])
+    @pytest.mark.parametrize("case_id", [c.id for c in list_cases()])
     def test_solve(self, capsys: pytest.CaptureFixture[str], case_id: str) -> None:
         code, out, _ = run(capsys, "case", "solve", case_id)
         assert code == 0
