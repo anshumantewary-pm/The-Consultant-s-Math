@@ -16,10 +16,14 @@ from typing import Any
 
 from casemath import __version__
 from casemath.calculators import (
+    arc_elasticity,
     break_even_analysis,
+    breakeven_volume_change,
     hhi,
     investment_appraisal,
     market_share,
+    markup_price,
+    optimal_price_linear,
     profit_bridge,
     profit_statement,
     relative_market_share,
@@ -27,6 +31,7 @@ from casemath.calculators import (
     top_down,
     unit_economics,
     units_for_target_profit,
+    volume_after_price_change,
 )
 from casemath.cases import get_case, list_cases, render_case, render_solution
 from casemath.cases.base import format_step
@@ -66,6 +71,19 @@ def _unit_economics(raw: str, kind: str) -> tuple[float, float, float, float]:
     except ValueError:
         raise ValidationError(f"{kind} {raw!r} must contain only numbers") from None
     return price, units, cost, fixed
+
+
+def _points(raw: str | None) -> tuple[float, float, float, float]:
+    if raw is None:
+        raise ValidationError("--points PRICE1,UNITS1,PRICE2,UNITS2 is required here")
+    parts = raw.split(",")
+    try:
+        p1, q1, p2, q2 = (float(p) for p in parts)
+    except ValueError:
+        raise ValidationError(
+            f"--points must be four numbers PRICE1,UNITS1,PRICE2,UNITS2, got {raw!r}"
+        ) from None
+    return p1, q1, p2, q2
 
 
 # ---------------------------------------------------------------- handlers
@@ -210,6 +228,54 @@ def _unit_econ(args: argparse.Namespace) -> Output:
     return Output("\n".join(lines), {**ue.to_dict(), "healthy": ue.healthy})
 
 
+def _need(args: argparse.Namespace, *names: str) -> None:
+    missing = [f"--{n.replace('_', '-')}" for n in names if getattr(args, n) is None]
+    if missing:
+        raise ValidationError(f"{args.command} {args.action} needs {' and '.join(missing)}")
+
+
+def _pricing(args: argparse.Namespace) -> Output:
+    _need(args, *{"change": ("change", "margin"), "optimal": ("unit_cost",)}.get(args.action, ()))
+    if args.action == "change":
+        needed = breakeven_volume_change(args.change, args.margin)
+        data: dict[str, float] = {"breakeven_volume_change": needed}
+        lines = [
+            f"Price change       {args.change:+.1%}",
+            f"Contribution margin {fmt_pct(args.margin)}",
+            f"Volume needed      {needed:+.1%} to keep total contribution flat",
+        ]
+        if args.elasticity is not None:
+            expected = volume_after_price_change(1, args.change, args.elasticity) - 1
+            data["expected_volume_change"] = expected
+            verdict = "worth it" if (expected >= needed) else "destroys value"
+            lines.append(
+                f"Expected volume    {expected:+.1%} at elasticity {args.elasticity:g}: {verdict}"
+            )
+        return Output("\n".join(lines), data)
+    if args.action == "elasticity":
+        e = arc_elasticity(*_points(args.points))
+        kind = "elastic" if e < -1 else "inelastic"
+        return Output(f"Arc elasticity     {e:.2f} ({kind})", {"elasticity": e})
+    if args.points is not None:
+        opt = optimal_price_linear(*_points(args.points), unit_cost=args.unit_cost)
+        lines = [
+            f"Demand             Q = {fmt_number(opt.intercept, 1)} - "
+            f"{fmt_number(opt.slope, 2)} x P",
+            f"Choke price        {fmt_money(opt.choke_price)}",
+            f"Optimal price      {fmt_money(opt.price)}",
+            f"Units at optimum   {fmt_number(opt.units, 1)}",
+            f"Contribution       {fmt_money(opt.contribution)}",
+        ]
+        return Output("\n".join(lines), opt.to_dict())
+    if args.elasticity is None:
+        raise ValidationError("pricing optimal needs --points P1,Q1,P2,Q2 or --elasticity")
+    price = markup_price(args.unit_cost, args.elasticity)
+    return Output(
+        f"Optimal price      {fmt_money(price)}  (markup {price / args.unit_cost - 1:.0%})",
+        {"price": price, "elasticity": args.elasticity, "unit_cost": args.unit_cost},
+    )
+
+
 # ---------------------------------------------------------------- parser
 
 
@@ -275,6 +341,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--churn", type=float, required=True, help="customers lost per period, 0..1")
     p.add_argument("--cac", type=float, required=True, help="cost to acquire one customer")
     p.add_argument("--discount-rate", type=float, default=0.0, help="per period (default 0)")
+
+    p = add("pricing", _pricing, "price moves, elasticity and the profit-maximising price")
+    p.add_argument("action", choices=["change", "elasticity", "optimal"])
+    p.add_argument(
+        "--change", type=float, help="change: price change as a fraction, -0.1 = 10%% cut"
+    )
+    p.add_argument("--margin", type=float, help="change: contribution margin as a fraction")
+    p.add_argument("--elasticity", type=float, help="change / optimal: price elasticity, e.g. -2")
+    p.add_argument("--points", metavar="P1,Q1,P2,Q2", help="elasticity / optimal: two observations")
+    p.add_argument("--unit-cost", type=float, help="optimal: variable cost per unit")
 
     p = add("tree", _tree, "the profitability issue tree, with a MECE check")
     p.add_argument("--price", type=float)
