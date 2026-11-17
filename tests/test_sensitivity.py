@@ -1,7 +1,7 @@
 import pytest
 
 from casemath.analysis.model import Inputs, check_inputs, evaluate
-from casemath.analysis.sensitivity import one_way
+from casemath.analysis.sensitivity import one_way, tornado
 from casemath.core import ValidationError
 
 
@@ -44,3 +44,35 @@ class TestOneWay:
     def test_rejects_empty_values(self) -> None:
         with pytest.raises(ValidationError, match="values must not be empty"):
             one_way(profit, BASE, "price", [])
+
+
+class TestTornado:
+    def test_default_ten_percent(self) -> None:
+        t = tornado(profit, BASE)
+        assert t.base_output == 1_500
+        # Price +/-1 moves profit +/-1,000; cost +/-0.6 -> 600; units +/-100 -> 400; fixed 250.
+        assert [b.input for b in t.bars] == ["price", "unit_cost", "units", "fixed"]
+        assert t.bars[0].swing == pytest.approx(2_000)
+        assert t.most_sensitive == "price"
+
+    def test_explicit_ranges(self) -> None:
+        t = tornado(profit, BASE, {"units": (0, 3_000), "price": (9.5, 10.5)})
+        assert t.most_sensitive == "units"
+        assert t.bars[0].output_at_low == -2_500
+        assert len(t.bars) == 2
+
+    def test_skips_zero_inputs_by_default(self) -> None:
+        t = tornado(profit, {**BASE, "fixed": 0})
+        assert "fixed" not in [b.input for b in t.bars]
+
+    def test_all_zero(self) -> None:
+        with pytest.raises(ValidationError, match="explicit ranges"):
+            tornado(lambda x: x["a"], {"a": 0})
+
+    def test_unknown_range_name(self) -> None:
+        with pytest.raises(ValidationError, match="unknown input"):
+            tornado(profit, BASE, {"margin": (0, 1)})
+
+    def test_bad_pct(self) -> None:
+        with pytest.raises(ValidationError, match="pct"):
+            tornado(profit, BASE, pct=0)
