@@ -7,6 +7,7 @@ probability, and turning "positive NPV but risky" into a negotiating target.
 
 from __future__ import annotations
 
+from functools import cache
 from typing import Any
 
 from casemath.analysis.distributions import Triangular, Uniform
@@ -142,88 +143,93 @@ volume growth and maintenance.
         )
 
     def solve(self) -> Solution:
-        flows = cash_flows(BASE)
-        appraisal = investment_appraisal(WACC, flows)
-        table = compare_scenarios(project_npv, BASE, SCENARIOS, PROBABILITIES)
-        sim = simulate(project_npv, _uncertain(CAPEX), runs=RUNS, seed=SEED)
-        p5, p95 = sim.band_90
-        break_even_savings = goal_seek(project_npv, BASE, "savings", 0.0, 0.0, SAVINGS).value
-        max_capex = goal_seek(
-            loss_probability,
-            {"capex": CAPEX},
-            "capex",
-            MAX_LOSS_PROBABILITY,
-            low=CAPEX * 0.5,
-            high=CAPEX,
-            tolerance=1_000.0,
-        ).value
-        discount_needed = 1 - max_capex / CAPEX
-        passes = (table.expected_value or 0) > 0 and sim.prob_below_threshold <= (
-            MAX_LOSS_PROBABILITY
-        )
+        # Every input is a constant and the simulation is seeded, so the answer never
+        # changes; compute it once per process (about 13 simulations of 5,000 runs).
+        return _solve(self.id, self.title)
 
-        steps = (
-            *(Step(f"Cash flow, year {t}", f, "$") for t, f in enumerate(flows)),
-            Step("NPV at 9%", appraisal.npv, "$"),
-            Step("IRR", appraisal.irr or 0.0, "%"),
-            Step("Payback", appraisal.simple_payback or 0.0, "years"),
-            Step("Discounted payback", appraisal.discounted_payback or 0.0, "years"),
-            *(Step(f"NPV, {row.name}", row.output, "$") for row in table.rows),
-            Step("Probability-weighted NPV", table.expected_value or 0.0, "$"),
-            Step("Simulated mean NPV", sim.mean, "$"),
-            Step("Simulated NPV, 5th percentile", p5, "$"),
-            Step("Simulated NPV, 95th percentile", p95, "$"),
-            Step("Probability NPV < 0", sim.prob_below_threshold, "%"),
-            Step("Break-even year-1 savings", break_even_savings, "$"),
-            Step("Highest capex meeting the 10% risk rule", max_capex, "$"),
-        )
 
-        def money(value: float) -> str:
-            return fmt_money(value, compact=True)
+@cache
+def _solve(case_id: str, title: str) -> Solution:
+    flows = cash_flows(BASE)
+    appraisal = investment_appraisal(WACC, flows)
+    table = compare_scenarios(project_npv, BASE, SCENARIOS, PROBABILITIES)
+    sim = simulate(project_npv, _uncertain(CAPEX), runs=RUNS, seed=SEED)
+    p5, p95 = sim.band_90
+    break_even_savings = goal_seek(project_npv, BASE, "savings", 0.0, 0.0, SAVINGS).value
+    max_capex = goal_seek(
+        loss_probability,
+        {"capex": CAPEX},
+        "capex",
+        MAX_LOSS_PROBABILITY,
+        low=CAPEX * 0.5,
+        high=CAPEX,
+        tolerance=1_000.0,
+    ).value
+    discount_needed = 1 - max_capex / CAPEX
+    passes = (table.expected_value or 0) > 0 and sim.prob_below_threshold <= (MAX_LOSS_PROBABILITY)
 
-        downside = table.rows[0]
-        findings = (
-            f"On the base case the project clears the bar: NPV {money(appraisal.npv)}, IRR "
-            f"{fmt_pct(appraisal.irr or 0.0)} against a {fmt_pct(WACC, 0)} cost of capital, "
-            f"payback in {appraisal.simple_payback:.1f} years.",
-            f"The downside scenario loses {money(-downside.output)}; weighting the three "
-            f"scenarios 25/50/25 still gives {money(table.expected_value or 0.0)}.",
-            f"Savings only need to reach {money(break_even_savings)} in year 1 for NPV to be "
-            f"zero, {fmt_pct(1 - break_even_savings / SAVINGS)} below plan.",
-            f"Across operations' ranges the mean NPV is {money(sim.mean)}, below the base case "
-            "because the savings range is skewed to the downside, and there is a "
-            f"{fmt_pct(sim.prob_below_threshold)} chance of NPV below zero. The 90% range is "
-            f"{money(p5)} to {money(p95)}.",
-            f"That fails the board's {fmt_pct(MAX_LOSS_PROBABILITY, 0)} risk rule. At a capex "
-            f"of {money(max_capex)} ({fmt_pct(discount_needed)} off the quote) it would pass.",
-        )
-        recommendation = (
-            "Do not sign at $12M. The project creates value on average but carries a "
-            f"{fmt_pct(sim.prob_below_threshold, 0)} chance of losing money. Go back to the "
-            f"vendor for at least {fmt_pct(discount_needed)} off (capex of "
-            f"{money(max_capex)} or less), or an equivalent mix of price cut and savings "
-            "guarantee, and sign if they meet it."
-        )
-        return Solution(
-            case_id=self.id,
-            title=self.title,
-            steps=steps,
-            findings=findings,
-            recommendation=recommendation,
-            answer={
-                "npv": appraisal.npv,
-                "irr": appraisal.irr,
-                "payback_years": appraisal.simple_payback,
-                "discounted_payback_years": appraisal.discounted_payback,
-                "downside_npv": downside.output,
-                "expected_npv": table.expected_value,
-                "simulated_mean_npv": sim.mean,
-                "prob_loss": sim.prob_below_threshold,
-                "npv_p5": p5,
-                "npv_p95": p95,
-                "break_even_savings": break_even_savings,
-                "max_capex": max_capex,
-                "discount_needed": discount_needed,
-                "passes_board_rule": float(passes),
-            },
-        )
+    steps = (
+        *(Step(f"Cash flow, year {t}", f, "$") for t, f in enumerate(flows)),
+        Step("NPV at 9%", appraisal.npv, "$"),
+        Step("IRR", appraisal.irr or 0.0, "%"),
+        Step("Payback", appraisal.simple_payback or 0.0, "years"),
+        Step("Discounted payback", appraisal.discounted_payback or 0.0, "years"),
+        *(Step(f"NPV, {row.name}", row.output, "$") for row in table.rows),
+        Step("Probability-weighted NPV", table.expected_value or 0.0, "$"),
+        Step("Simulated mean NPV", sim.mean, "$"),
+        Step("Simulated NPV, 5th percentile", p5, "$"),
+        Step("Simulated NPV, 95th percentile", p95, "$"),
+        Step("Probability NPV < 0", sim.prob_below_threshold, "%"),
+        Step("Break-even year-1 savings", break_even_savings, "$"),
+        Step("Highest capex meeting the 10% risk rule", max_capex, "$"),
+    )
+
+    def money(value: float) -> str:
+        return fmt_money(value, compact=True)
+
+    downside = table.rows[0]
+    findings = (
+        f"On the base case the project clears the bar: NPV {money(appraisal.npv)}, IRR "
+        f"{fmt_pct(appraisal.irr or 0.0)} against a {fmt_pct(WACC, 0)} cost of capital, "
+        f"payback in {appraisal.simple_payback:.1f} years.",
+        f"The downside scenario loses {money(-downside.output)}; weighting the three "
+        f"scenarios 25/50/25 still gives {money(table.expected_value or 0.0)}.",
+        f"Savings only need to reach {money(break_even_savings)} in year 1 for NPV to be "
+        f"zero, {fmt_pct(1 - break_even_savings / SAVINGS)} below plan.",
+        f"Across operations' ranges the mean NPV is {money(sim.mean)}, below the base case "
+        "because the savings range is skewed to the downside, and there is a "
+        f"{fmt_pct(sim.prob_below_threshold)} chance of NPV below zero. The 90% range is "
+        f"{money(p5)} to {money(p95)}.",
+        f"That fails the board's {fmt_pct(MAX_LOSS_PROBABILITY, 0)} risk rule. At a capex "
+        f"of {money(max_capex)} ({fmt_pct(discount_needed)} off the quote) it would pass.",
+    )
+    recommendation = (
+        "Do not sign at $12M. The project creates value on average but carries a "
+        f"{fmt_pct(sim.prob_below_threshold, 0)} chance of losing money. Go back to the "
+        f"vendor for at least {fmt_pct(discount_needed)} off (capex of "
+        f"{money(max_capex)} or less), or an equivalent mix of price cut and savings "
+        "guarantee, and sign if they meet it."
+    )
+    return Solution(
+        case_id=case_id,
+        title=title,
+        steps=steps,
+        findings=findings,
+        recommendation=recommendation,
+        answer={
+            "npv": appraisal.npv,
+            "irr": appraisal.irr,
+            "payback_years": appraisal.simple_payback,
+            "discounted_payback_years": appraisal.discounted_payback,
+            "downside_npv": downside.output,
+            "expected_npv": table.expected_value,
+            "simulated_mean_npv": sim.mean,
+            "prob_loss": sim.prob_below_threshold,
+            "npv_p5": p5,
+            "npv_p95": p95,
+            "break_even_savings": break_even_savings,
+            "max_capex": max_capex,
+            "discount_needed": discount_needed,
+            "passes_board_rule": float(passes),
+        },
+    )
