@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Owner | Anshuman Tewary |
-| Status | v0.1 shipped |
-| Last updated | 2026-11-15 |
+| Status | v0.2 in review (advanced analytics) |
+| Last updated | 2026-11-18 |
 
 ## 1. Problem
 
@@ -27,8 +27,8 @@ A small, dependency-free Python library and CLI that:
 
 ### Non-goals
 
-- No GUI or web app in v0.1 (the CLI's `--json` output leaves room for one later).
-- No financial modelling beyond case-interview scope: no DCF, tax or working capital.
+- No server-side app: the web front end runs the package in the browser (Pyodide) and stores nothing.
+- No full financial modelling: v0.2 adds NPV/IRR on a cash-flow list, but no three-statement models, tax or working capital.
 - No automatic judgement of *qualitative* MECE quality. The checker flags structural and numeric faults; a human still decides whether "Channel" and "Region" are a sensible split.
 
 ## 3. Users
@@ -66,6 +66,26 @@ A small, dependency-free Python library and CLI that:
 | FR-10 | CLI `casemath` with subcommands `profit`, `bridge`, `breakeven`, `share`, `hhi`, `size`, `tree`, `case`; every command supports `--json` | All |
 | FR-11 | All invalid inputs raise `casemath.ValidationError` (a `ValueError`); the CLI turns these into a one-line message and exit code 2 | US-8 |
 
+### v0.2: advanced analytics
+
+User stories:
+
+- **US-9** As an analyst, I enter a cash-flow series and get NPV, IRR, profitability index, simple and discounted payback.
+- **US-10** As a candidate, I check whether a price change pays for itself, estimate elasticity from two data points and find the profit-maximising price.
+- **US-11** As an analyst, I compute LTV, CAC payback and LTV/CAC with a health verdict.
+- **US-12** As an analyst, I see which assumption moves the answer most (tornado), solve for the value of an input that hits a target (goal seek), compare weighted scenarios, and simulate uncertain inputs to get a probability of loss.
+
+| ID | Requirement | Story |
+|---|---|---|
+| FR-12 | `npv`, `irr` (bracketed bisection, never diverges), `discounted_payback`, `simple_payback`, `annuity_pv`, `perpetuity`, `investment_appraisal` | US-9 |
+| FR-13 | `arc_elasticity`, `breakeven_volume_change`, `volume_after_price_change`, `markup_price` (Lerner), `optimal_price_linear` | US-10 |
+| FR-14 | `lifetime_value` (optionally discounted), `cac_payback`, `unit_economics` with a 3x LTV/CAC health check | US-11 |
+| FR-15 | `analysis` package working on any `Model` (function of named inputs): `one_way`, `tornado`, `two_way`, `goal_seek`, `compare_scenarios`, `simulate` with Fixed / Uniform / Triangular / Normal inputs, histogram | US-12 |
+| FR-16 | Simulations are reproducible: a fixed default seed, and the same seed always gives the same result | US-12 |
+| FR-17 | CLI: `invest`, `unit-econ`, `pricing`, `models`, `sensitivity`, `goalseek`, `simulate`, all with `--json` | US-9 to US-12 |
+| FR-18 | Case 3 (SaaS pricing) and Case 4 (investment under uncertainty) solved end to end with the new tools | US-7 |
+| FR-19 | Web app panels for every v0.2 command | All |
+
 ## 6. Non-functional requirements
 
 | ID | Requirement | How it is checked |
@@ -77,10 +97,12 @@ A small, dependency-free Python library and CLI that:
 | NFR-5 | ≥ 95% branch coverage | `fail_under = 95` in coverage config |
 | NFR-6 | Results are immutable and JSON-serialisable | Frozen dataclasses + `to_dict()`; tests round-trip through `json.dumps` |
 | NFR-7 | Each calculator is a pure function: same input, same output, no I/O | Architecture rule; see [ARCHITECTURE.md](ARCHITECTURE.md) |
+| NFR-8 | Layers import only downward | `tests/test_architecture.py` parses every module |
+| NFR-9 | Full test suite stays fast enough to run on every save | Seeded case solutions are memoised; suite runs in seconds |
 
 ## 7. Success metrics
 
-- Both practice cases produce the documented answers in CI on every push.
+- Every practice case produces the documented answers in CI on every push.
 - CI green on all 12 matrix cells (3 OS × 4 Python versions).
 - A new calculator can be added by touching one module, its tests and one CLI handler, without editing any other calculator.
 
@@ -88,9 +110,9 @@ A small, dependency-free Python library and CLI that:
 
 | Version | Scope |
 |---|---|
-| **v0.1** (this release) | FR-1 to FR-11, two cases, CI, docs |
-| v0.2 | More cases (pricing, M&A synergy), `casemath drill` mode that generates random practice questions and checks answers |
-| v0.3 | Optional small web front end built on the `--json` output |
+| v0.1 | FR-1 to FR-11, two cases, CI, docs |
+| **v0.2** (this release) | FR-12 to FR-19: finance, pricing, unit economics, the analysis layer, Cases 3 and 4, web panels |
+| v0.3 | `casemath drill` mode that generates random practice questions and checks answers; an M&A synergy case |
 
 ## 9. Risks
 
@@ -99,3 +121,5 @@ A small, dependency-free Python library and CLI that:
 | Floating-point noise makes answers look wrong (e.g. 0.30000000000000004) | Formatting layer rounds for display; tests use `pytest.approx` |
 | Users trust the MECE checker too much | Docs and checker output say it checks structure and numbers, not judgement |
 | Scope creep into full financial modelling | Non-goals above; anything beyond case scope goes to the backlog |
+| Users read a simulated mean as a forecast | Output always shows the 90% range and probability of loss next to the mean; docs explain skew |
+| IRR has several roots for flows that change sign more than once | `irr` documents that it returns the lowest; docs say to trust NPV when they disagree |
