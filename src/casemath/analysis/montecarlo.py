@@ -37,6 +37,41 @@ def percentile(sorted_values: list[float], pct: float) -> float:
 
 
 @dataclass(frozen=True)
+class HistogramBin(Result):
+    low: float
+    high: float
+    count: int
+
+
+def histogram(sorted_values: list[float], bins: int = 12) -> tuple[HistogramBin, ...]:
+    """Equal-width bins from min to max; the last bin includes the maximum."""
+    if not sorted_values:
+        raise ValidationError("cannot bin no values")
+    bins = require_count("bins", bins)
+    low, high = sorted_values[0], sorted_values[-1]
+    if low == high:
+        return (HistogramBin(low, high, len(sorted_values)),)
+    width = (high - low) / bins
+    counts = [0] * bins
+    for value in sorted_values:
+        counts[min(int((value - low) / width), bins - 1)] += 1
+    return tuple(
+        HistogramBin(low + i * width, low + (i + 1) * width, count)
+        for i, count in enumerate(counts)
+    )
+
+
+def render_histogram(bins: tuple[HistogramBin, ...], width: int = 40) -> list[str]:
+    """Text bars, one line per bin, scaled so the tallest bar is ``width`` wide."""
+    tallest = max(b.count for b in bins)
+    return [
+        f"{b.low:>14,.2f} | {'#' * max(1 if b.count else 0, round(width * b.count / tallest))}"
+        f" {b.count}"
+        for b in bins
+    ]
+
+
+@dataclass(frozen=True)
 class Simulation(Result):
     runs: int
     seed: int | None
@@ -48,6 +83,7 @@ class Simulation(Result):
     threshold: float
     prob_below_threshold: float
     deterministic: float  # the model at every input's mean, for comparison
+    histogram: tuple[HistogramBin, ...]
 
     @property
     def p50(self) -> float:
@@ -94,4 +130,5 @@ def simulate(
         threshold=threshold,
         prob_below_threshold=below / runs,
         deterministic=evaluate(model, {name: d.mean for name, d in dists.items()}),
+        histogram=histogram(outputs),
     )

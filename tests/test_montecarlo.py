@@ -4,7 +4,7 @@ import pytest
 
 from casemath.analysis.distributions import Normal, Triangular, Uniform
 from casemath.analysis.model import Inputs
-from casemath.analysis.montecarlo import percentile, simulate
+from casemath.analysis.montecarlo import histogram, percentile, render_histogram, simulate
 from casemath.core import ValidationError
 
 
@@ -78,3 +78,28 @@ class TestSimulate:
             simulate(profit, {})
         with pytest.raises(ValidationError, match="runs"):
             simulate(lambda x: x["a"], {"a": 1}, runs=1)
+
+
+class TestHistogram:
+    def test_counts_add_up(self) -> None:
+        bins = histogram([float(v) for v in range(100)], bins=10)
+        assert len(bins) == 10
+        assert sum(b.count for b in bins) == 100
+        assert bins[-1].count == 10  # max lands in the last bin
+
+    def test_single_value(self) -> None:
+        assert histogram([3.0, 3.0]) == histogram([3.0, 3.0], bins=5)
+        assert histogram([3.0, 3.0])[0].count == 2
+
+    def test_empty(self) -> None:
+        with pytest.raises(ValidationError, match="no values"):
+            histogram([])
+
+    def test_render(self) -> None:
+        lines = render_histogram(histogram([0.0, 0.0, 0.0, 1.0], bins=2), width=6)
+        assert lines[0].endswith("###### 3")
+        assert lines[1].endswith("## 1")
+
+    def test_simulation_has_histogram(self) -> None:
+        sim = simulate(lambda x: x["a"], {"a": Uniform(0, 1)}, runs=500)
+        assert sum(b.count for b in sim.histogram) == 500
