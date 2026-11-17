@@ -5,8 +5,7 @@
 ![Coverage](https://img.shields.io/badge/coverage-%E2%89%A595%25-brightgreen)
 ![Dependencies](https://img.shields.io/badge/runtime%20deps-0-brightgreen)
 
-A consulting case math toolkit. Profitability, break-even, market share and market sizing calculators, pricing and M&A synergy tools, a MECE issue-tree checker, four fully solved practice cases and a drill mode that quizzes you with checked answers. Python library and CLI, no runtime dependencies.
-
+A consulting case math toolkit. Profitability, break-even, market share and market sizing calculators, pricing and M&A synergy tools, a MECE issue-tree checker, four fully solved practice cases, a drill mode that quizzes you with checked answers, and a local web UI. Python library, CLI and browser, no runtime dependencies. 
 ```console
 $ casemath breakeven --fixed-costs 100000 --price 10 --variable-cost 6 --expected-units 40000
 Contribution/unit  $4.00  (40.0%)
@@ -36,6 +35,7 @@ pip install -e ".[dev]"     # or: pip install .   (no dev tools)
 | **Frameworks** | `profitability_tree`, issue-tree `Node`, `render`, `check_mece` | `tree` |
 | **Practice cases** | `get_case("1").solve()` | `case list / show / solve` |
 | **Drill** | `drill.generate(topic, count, seed)`, `drill.run_drill` | `drill` |
+| **Web UI** | `web.make_server`, `web.call` (JSON API over the CLI) | `serve` |
 
 ## CLI tour
 
@@ -75,7 +75,12 @@ casemath case solve 2
 casemath drill
 casemath drill --topic pricing --count 10 --seed 7   # same seed, same questions
 casemath drill --seed 7 --reveal                     # answer key, no quiz
+
+# Web UI: calculators, cases and drill in the browser (localhost only by default)
+casemath serve --open
 ```
+
+`casemath serve` runs a small standard-library HTTP server. The page posts JSON to `/api/<command>`; the body is turned into the same arguments the CLI takes and parsed by the CLI's own parser, so the browser and the terminal always give the same answers and the same errors.
 
 ## Library use
 
@@ -118,12 +123,13 @@ src/casemath/
 ├── frameworks/    issue_tree, mece, profitability (the standard tree)
 ├── cases/         base, case_01 … case_04
 ├── drill.py       random practice questions with checked answers
+├── web/           api (JSON over the CLI), server (http.server), index.html
 └── cli.py         argparse front end
-tests/             one test module per area, 277 tests
+tests/             one test module per area, 304 tests
 docs/              PRD, architecture, frameworks guide, case write-ups
 ```
 
-Layers only import downward (core ← calculators / frameworks ← cases / drill ← cli). Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Requirements: [docs/PRD.md](docs/PRD.md).
+Layers only import downward (core ← calculators / frameworks ← cases / drill ← cli ← web). Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Requirements: [docs/PRD.md](docs/PRD.md).
 
 ## Development
 
