@@ -136,3 +136,89 @@ class TestPricing:
         code, _, err = run(capsys, *argv)
         assert code == 2
         assert message in err
+
+
+class TestModels:
+    def test_list(self, capsys: Capture) -> None:
+        code, out, _ = run(capsys, "models")
+        assert code == 0
+        assert "investment=1,000,000" in out
+        assert set(run_json(capsys, "models")) == {"profit", "npv", "ltv-cac"}
+
+
+class TestSensitivity:
+    def test_default_tornado(self, capsys: Capture) -> None:
+        code, out, _ = run(capsys, "sensitivity", "profit")
+        assert code == 0
+        assert "profit at base case: $60,000.00" in out
+        assert "Most sensitive: price" in out
+
+    def test_ranges_and_set(self, capsys: Capture) -> None:
+        data = run_json(
+            capsys, "sensitivity", "profit", "--set", "units=10000",
+            "--range", "fixed_costs=0:200000", "--range", "price=9:11",
+        )  # fmt: skip
+        assert data["most_sensitive"] == "fixed_costs"
+        assert data["base_output"] == -60_000
+
+    def test_ratio_model_formatting(self, capsys: Capture) -> None:
+        _, out, _ = run(capsys, "sensitivity", "ltv-cac", "--range", "churn=0.02:0.08")
+        assert "6.67x to 1.67x" in out
+
+    @pytest.mark.parametrize(
+        ("argv", "message"),
+        [
+            (("--set", "margin=1"), "has inputs price"),
+            (("--set", "price"), "NAME=NUMBER"),
+            (("--range", "price=9"), "LOW:HIGH"),
+            (("--range", "price=a:b"), "LOW:HIGH"),
+        ],
+    )
+    def test_errors(self, capsys: Capture, argv: tuple[str, ...], message: str) -> None:
+        code, _, err = run(capsys, "sensitivity", "profit", *argv)
+        assert code == 2
+        assert message in err
+
+
+class TestGoalSeek:
+    def test_break_even(self, capsys: Capture) -> None:
+        code, out, _ = run(capsys, "goalseek", "profit", "--vary", "units", "--between", "0:1e5")
+        assert code == 0
+        assert out.startswith("units = 25,000 gives profit = $0.00")
+
+    def test_npv_hurdle(self, capsys: Capture) -> None:
+        data = run_json(
+            capsys, "goalseek", "npv", "--vary", "rate", "--between", "0:1", "--set", "growth=0",
+            "--set", "years=3", "--set", "investment=1000", "--set", "cash_flow=500",
+        )  # fmt: skip
+        assert data["value"] == pytest.approx(0.23375, abs=1e-5)
+
+
+class TestSimulate:
+    ARGS = ("simulate", "profit", "--dist", "units=tri:20000:40000:45000", "--runs", "2000")
+
+    def test_text(self, capsys: Capture) -> None:
+        code, out, _ = run(capsys, *self.ARGS)
+        assert code == 0
+        assert "Runs               2,000 (seed 42)" in out
+        assert "P(profit < 0)      " in out
+        assert " | #" in out
+
+    def test_json_reproducible(self, capsys: Capture) -> None:
+        a = run_json(capsys, *self.ARGS)
+        b = run_json(capsys, *self.ARGS)
+        assert a == b
+        assert 0 < float(a["prob_below_threshold"]) < 0.5  # type: ignore[arg-type]
+
+    def test_ratio_threshold(self, capsys: Capture) -> None:
+        _, out, _ = run(
+            capsys, "simulate", "ltv-cac", "--dist", "churn=uniform:0.02:0.08",
+            "--threshold", "3", "--runs", "500",
+        )  # fmt: skip
+        assert "P(LTV/CAC < 3)" in out
+
+    @pytest.mark.parametrize("bad", ["units", "margin=tri:1:2:3", "units=beta:1:2"])
+    def test_bad_dist(self, capsys: Capture, bad: str) -> None:
+        code, _, err = run(capsys, "simulate", "profit", "--dist", bad)
+        assert code == 2
+        assert err.startswith("error:")

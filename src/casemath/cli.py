@@ -15,6 +15,16 @@ from dataclasses import dataclass
 from typing import Any
 
 from casemath import __version__
+from casemath.analysis import (
+    MODELS,
+    BuiltinModel,
+    get_model,
+    goal_seek,
+    parse_distribution,
+    simulate,
+    tornado,
+)
+from casemath.analysis.montecarlo import render_histogram
 from casemath.calculators import (
     arc_elasticity,
     break_even_analysis,
@@ -276,6 +286,104 @@ def _pricing(args: argparse.Namespace) -> Output:
     )
 
 
+def _pair(raw: str, kind: str) -> tuple[float, float]:
+    """``LOW:HIGH`` -> (low, high)."""
+    low, sep, high = raw.partition(":")
+    try:
+        if not sep:
+            raise ValueError
+        return float(low), float(high)
+    except ValueError:
+        raise ValidationError(f"{kind} must look like LOW:HIGH, got {raw!r}") from None
+
+
+def _model_and_base(args: argparse.Namespace) -> tuple[BuiltinModel, dict[str, float]]:
+    model = get_model(args.model)
+    base = dict(model.defaults)
+    for raw in args.set:
+        name, value = _key_value(raw, "--set")
+        if name not in base:
+            raise ValidationError(
+                f"--set {name}: model {model.name!r} has inputs {', '.join(base)}"
+            )
+        base[name] = value
+    return model, base
+
+
+def _fmt_output(model: BuiltinModel, value: float) -> str:
+    return f"{value:.2f}x" if model.output.endswith("CAC") else fmt_money(value)
+
+
+def _models(args: argparse.Namespace) -> Output:
+    lines = []
+    for m in MODELS.values():
+        inputs = ", ".join(f"{k}={v:,.10g}" for k, v in m.defaults.items())
+        lines += [f"{m.name:<8} {m.description}", f"         defaults: {inputs}"]
+    data = {m.name: {"description": m.description, "defaults": m.defaults} for m in MODELS.values()}
+    return Output("\n".join(lines), data)
+
+
+def _sensitivity(args: argparse.Namespace) -> Output:
+    model, base = _model_and_base(args)
+    ranges = None
+    if args.range:
+        ranges = {}
+        for raw in args.range:
+            name, _, bounds = raw.partition("=")
+            ranges[name.strip()] = _pair(bounds, f"--range {name}")
+    t = tornado(model.function, base, ranges, pct=args.pct)
+    widest = t.bars[0].swing or 1.0
+    lines = [f"{model.output} at base case: {_fmt_output(model, t.base_output)}", ""]
+    for bar in t.bars:
+        length = round(30 * bar.swing / widest)
+        lines.append(
+            f"{bar.input:<14} {'#' * length:<30} {_fmt_output(model, bar.output_at_low)} to "
+            f"{_fmt_output(model, bar.output_at_high)}  ({bar.low_value:g} to {bar.high_value:g})"
+        )
+    lines += ["", f"Most sensitive: {t.most_sensitive}"]
+    return Output("\n".join(lines), {**t.to_dict(), "most_sensitive": t.most_sensitive})
+
+
+def _goalseek(args: argparse.Namespace) -> Output:
+    model, base = _model_and_base(args)
+    low, high = _pair(args.between, "--between")
+    result = goal_seek(model.function, base, args.vary, args.target, low, high)
+    text = (
+        f"{args.vary} = {result.value:,.6g} gives {model.output} = "
+        f"{_fmt_output(model, result.output)}"
+    )
+    return Output(text, result.to_dict())
+
+
+def _simulate(args: argparse.Namespace) -> Output:
+    model, base = _model_and_base(args)
+    inputs: dict[str, Any] = dict(base)
+    for raw in args.dist:
+        name, sep, spec = raw.partition("=")
+        if not sep or name.strip() not in base:
+            raise ValidationError(
+                f"--dist must look like NAME=SPEC with NAME one of {', '.join(base)}, got {raw!r}"
+            )
+        inputs[name.strip()] = parse_distribution(spec)
+    sim = simulate(model.function, inputs, runs=args.runs, seed=args.seed, threshold=args.threshold)
+
+    def fmt(value: float) -> str:
+        return _fmt_output(model, value)
+
+    low, high = sim.band_90
+    lines = [
+        f"Runs               {sim.runs:,} (seed {sim.seed})",
+        f"Deterministic      {fmt(sim.deterministic)}",
+        f"Mean               {fmt(sim.mean)}",
+        f"Median             {fmt(sim.p50)}",
+        f"90% range          {fmt(low)} to {fmt(high)}",
+        f"{f'P({model.output} < {args.threshold:g})':<19}{fmt_pct(sim.prob_below_threshold)}",
+        "",
+        *render_histogram(sim.histogram),
+    ]
+    return Output("\n".join(lines), sim.to_dict())
+
+
 # ---------------------------------------------------------------- parser
 
 
@@ -351,6 +459,39 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--elasticity", type=float, help="change / optimal: price elasticity, e.g. -2")
     p.add_argument("--points", metavar="P1,Q1,P2,Q2", help="elasticity / optimal: two observations")
     p.add_argument("--unit-cost", type=float, help="optimal: variable cost per unit")
+
+    add("models", _models, "list the built-in models used by sensitivity, goalseek and simulate")
+
+    def model_command(name: str, handler: Handler, help_text: str) -> argparse.ArgumentParser:
+        p = add(name, handler, help_text)
+        p.add_argument("model", choices=list(MODELS), help="built-in model (see 'models')")
+        p.add_argument(
+            "--set", action="append", default=[], metavar="NAME=VALUE", help="override an input"
+        )
+        return p
+
+    p = model_command(
+        "sensitivity", _sensitivity, "tornado: rank inputs by how much they move the answer"
+    )
+    p.add_argument("--range", action="append", default=[], metavar="NAME=LOW:HIGH")
+    p.add_argument("--pct", type=float, default=0.10, help="swing when no --range (default 0.10)")
+
+    p = model_command("goalseek", _goalseek, "find the input value that hits a target output")
+    p.add_argument("--vary", required=True, metavar="NAME", help="input to solve for")
+    p.add_argument("--target", type=float, default=0.0, help="output to hit (default 0)")
+    p.add_argument("--between", required=True, metavar="LOW:HIGH", help="search bracket")
+
+    p = model_command("simulate", _simulate, "Monte Carlo: ranges on inputs -> range on the answer")
+    p.add_argument(
+        "--dist",
+        action="append",
+        default=[],
+        metavar="NAME=SPEC",
+        help="uncertain input, e.g. units=tri:30000:40000:45000 or price=normal:10:0.5",
+    )
+    p.add_argument("--runs", type=int, default=10_000)
+    p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--threshold", type=float, default=0.0, help="report P(output < this)")
 
     p = add("tree", _tree, "the profitability issue tree, with a MECE check")
     p.add_argument("--price", type=float)
