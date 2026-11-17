@@ -4,6 +4,11 @@ casemath is a layered library with a thin CLI on top. Each layer only imports fr
 
 ```
             ┌──────────────────────────────────────────┐
+  Browser   │  web/  index.html → POST /api/<command>   │
+            │        api.call → cli parser + handler    │
+            └───────────────┬──────────────────────────┘
+                            │
+            ┌───────────────▼──────────────────────────┐
   Interface │  cli.py  (argparse, text / --json output) │
             └───────────────┬──────────────────────────┘
                             │
@@ -39,6 +44,7 @@ casemath is a layered library with a thin CLI on top. Each layer only imports fr
 | Cases | `casemath.cases` | Practice cases: data + a `solve()` that chains calculators | calculators, frameworks, core |
 | Drill | `casemath.drill` | Seeded question generators whose answer key comes from the calculators; `run_drill` takes `ask`/`say` callables | calculators, core |
 | Interface | `casemath.cli` | Parse arguments, call the library, print text or JSON | everything |
+| Web | `casemath.web` | Turn a JSON body into CLI arguments, run the CLI handler, serve the page | cli, drill |
 
 Calculators and frameworks do not import each other. The CLI is the only place that does I/O: `drill.run_drill` asks and prints only through the `input`/`print` callables the CLI hands it.
 

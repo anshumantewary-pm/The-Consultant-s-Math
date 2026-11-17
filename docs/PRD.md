@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Owner | Anshuman Tewary |
-| Status | v0.2 shipped |
+| Status | v0.3 shipped |
 | Last updated | 2026-11-17 |
 
 ## 1. Problem
@@ -27,7 +27,7 @@ A small, dependency-free Python library and CLI that:
 
 ### Non-goals
 
-- No GUI or web app in v0.1 (the CLI's `--json` output leaves room for one later).
+- No hosted web app. v0.3 adds a local-only UI (`casemath serve`); there are no accounts, no storage and no deployment.
 - No financial modelling beyond case-interview scope: no DCF, tax or working capital.
 - No automatic judgement of *qualitative* MECE quality. The checker flags structural and numeric faults; a human still decides whether "Channel" and "Region" are a sensible split.
 
@@ -71,6 +71,7 @@ A small, dependency-free Python library and CLI that:
 | FR-13 | Synergies: cost and revenue items with margin and probability haircut, phase-in schedule with integration costs and payback year, value at a multiple, premium % | US-10 |
 | FR-14 | Cases 3 (pricing) and 4 (M&A synergy) in the registry, same rules as FR-9 | US-7 |
 | FR-15 | `casemath drill`: seeded questions across seven topics, answer parsing (`$`, `K/M/B`, `%`, `x`), tolerance check, `--reveal` and `--json` answer keys; CLI adds `price` and `synergy` | US-11 |
+| FR-16 | `casemath serve`: local web UI (calculators, cases, drill) over a JSON API that reuses the CLI parser and handlers; stdlib only, binds to localhost by default, 64 KB body limit | All |
 | FR-11 | All invalid inputs raise `casemath.ValidationError` (a `ValueError`); the CLI turns these into a one-line message and exit code 2 | US-8 |
 
 ## 6. Non-functional requirements
@@ -96,8 +97,8 @@ A small, dependency-free Python library and CLI that:
 | Version | Scope |
 |---|---|
 | v0.1 | FR-1 to FR-11, two cases, CI, docs |
-| **v0.2** (this release) | Pricing and synergy calculators, Case 3 (pricing), Case 4 (M&A synergy), `casemath drill`, CLI `price` and `synergy` (FR-12 to FR-15) |
-| v0.3 | Optional small web front end built on the `--json` output |
+| v0.2 | Pricing and synergy calculators, Case 3 (pricing), Case 4 (M&A synergy), `casemath drill`, CLI `price` and `synergy` (FR-12 to FR-15) |
+| **v0.3** (this release) | Local web front end on top of the CLI's JSON output (FR-16) |
 
 ## 9. Risks
 

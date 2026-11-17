@@ -134,6 +134,8 @@ jobs:
           /tmp/smoke/bin/casemath --version
           /tmp/smoke/bin/casemath breakeven --fixed-costs 100000 --price 10 --variable-cost 6
           /tmp/smoke/bin/casemath case solve 1 --json > /dev/null
+          # The web UI's page is package data; make sure the wheel ships it.
+          /tmp/smoke/bin/python -c "from casemath.web.server import page; assert b'<title>casemath</title>' in page()"
       - uses: actions/upload-artifact@v4
         with:
           name: dist

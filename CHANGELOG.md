@@ -2,6 +2,13 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.3.0] - 2026-11-17
+
+### Added
+
+- `casemath serve`: a local web UI with every calculator, the four practice cases and the drill. Standard library only (`http.server`), localhost by default, `--open` to launch a browser.
+- `casemath.web.call(command, body)`: JSON API that maps a body onto CLI arguments and runs the CLI's own parser and handler, so web and terminal results never differ. `POST /api/check` grades a drill answer.
+
 ## [0.2.0] - 2026-11-17
 
 ### Added
