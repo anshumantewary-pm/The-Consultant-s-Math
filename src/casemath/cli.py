@@ -19,10 +19,13 @@ from casemath.calculators import (
     break_even_analysis,
     hhi,
     market_share,
+    price_change_impact,
+    price_elasticity,
     profit_bridge,
     profit_statement,
     relative_market_share,
     share_table,
+    synergy_value,
     top_down,
     units_for_target_profit,
 )
@@ -30,6 +33,7 @@ from casemath.cases import get_case, list_cases, render_case, render_solution
 from casemath.cases.base import format_step
 from casemath.core.errors import CaseMathError, ValidationError
 from casemath.core.formatting import fmt_money, fmt_number, fmt_pct, fmt_signed_money
+from casemath.drill import TOPICS, generate, run_drill
 from casemath.frameworks import check_mece, profitability_tree, render
 
 
@@ -167,13 +171,75 @@ def _case(args: argparse.Namespace) -> Output:
     return Output(render_solution(solution), solution.to_dict())
 
 
+def _price(args: argparse.Namespace) -> Output:
+    if args.elasticity is None:
+        if args.test is None:
+            raise ValidationError("give --elasticity, or --test OLD_UNITS,NEW_UNITS to measure it")
+        parts = args.test.split(",")
+        try:
+            old_units, new_units = (float(p) for p in parts)
+        except ValueError:
+            raise ValidationError(
+                f"--test must be OLD_UNITS,NEW_UNITS, got {args.test!r}"
+            ) from None
+        elasticity = price_elasticity(args.price, old_units, args.new_price, new_units)
+    else:
+        elasticity = args.elasticity
+    c = price_change_impact(
+        args.price, args.units, args.variable_cost, args.new_price, elasticity, args.fixed_costs
+    )
+    verdict = "pays off" if c.pays_off else "does not pay off"
+    text = "\n".join(
+        [
+            f"Price change       {fmt_pct(c.price_change)}",
+            f"Elasticity         {c.elasticity:.2f}",
+            f"Expected volume    {fmt_pct(c.expected_volume_change)}",
+            f"Break-even volume  {fmt_pct(c.break_even_volume_change)}",
+            f"Profit before      {fmt_money(c.before.profit)}",
+            f"Profit after       {fmt_money(c.after.profit)}",
+            f"Change             {fmt_signed_money(c.profit_change)}  ({verdict})",
+        ]
+    )
+    return Output(text, {**c.to_dict(), "pays_off": c.pays_off})
+
+
+def _synergy(args: argparse.Namespace) -> Output:
+    value = synergy_value(args.run_rate, args.multiple, args.one_off)
+    data: dict[str, float | bool] = {"synergy_value": value}
+    lines = [f"Synergy value      {fmt_money(value)}"]
+    if args.premium is not None:
+        headroom = value - args.premium
+        data |= {"premium": args.premium, "headroom": headroom, "justified": headroom >= 0}
+        verdict = "justified" if headroom >= 0 else "not justified by synergies"
+        lines.append(f"Headroom vs premium {fmt_signed_money(headroom)}  ({verdict})")
+    return Output("\n".join(lines), data)
+
+
+def _drill(args: argparse.Namespace) -> Output:
+    questions = generate(args.topic, args.count, args.seed)
+    data = [q.to_dict() for q in questions]
+    if args.reveal or args.json:
+        lines = []
+        for i, q in enumerate(questions, start=1):
+            lines += [f"Q{i} [{q.topic}] {q.prompt}", f"   {q.shown_answer()}  ({q.explanation})"]
+        return Output("\n".join(lines), data)
+    score = run_drill(questions, input, print)
+    text = f"\nScore: {score.correct}/{score.asked}"
+    if score.asked:
+        text += f" ({fmt_pct(score.accuracy, 0)})"
+    return Output(text, data)
+
+
 # ---------------------------------------------------------------- parser
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="casemath",
-        description="Consulting case math: profitability, break-even, market share, sizing.",
+        description=(
+            "Consulting case math: profitability, break-even, market share, sizing, "
+            "pricing and M&A synergies."
+        ),
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     common = argparse.ArgumentParser(add_help=False)
@@ -222,6 +288,29 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--variable-cost", type=float)
     p.add_argument("--fixed-costs", type=float)
     p.add_argument("--hints", action="store_true", help="show the question to ask at each node")
+
+    p = add("price", _price, "will a price change pay off? elasticity and break-even volume")
+    p.add_argument("--price", type=float, required=True, help="current price")
+    p.add_argument("--new-price", type=float, required=True)
+    p.add_argument("--units", type=float, required=True, help="current volume")
+    p.add_argument("--variable-cost", type=float, required=True, help="per unit")
+    p.add_argument("--fixed-costs", type=float, default=0.0)
+    group = p.add_mutually_exclusive_group()
+    group.add_argument("--elasticity", type=float, help="e.g. -1.5")
+    group.add_argument("--test", metavar="OLD_UNITS,NEW_UNITS",
+                       help="measure elasticity from a test at --price vs --new-price")  # fmt: skip
+
+    p = add("synergy", _synergy, "value of M&A synergies vs the premium paid")
+    p.add_argument("--run-rate", type=float, required=True, help="annual profit synergies")
+    p.add_argument("--multiple", type=float, required=True, help="valuation multiple, e.g. 8")
+    p.add_argument("--one-off", type=float, default=0.0, help="one-off integration costs")
+    p.add_argument("--premium", type=float, help="premium over standalone value")
+
+    p = add("drill", _drill, "practice questions with checked answers")
+    p.add_argument("--topic", choices=list(TOPICS), help="default: a mix of every topic")
+    p.add_argument("--count", type=int, default=5)
+    p.add_argument("--seed", type=int, help="same seed, same questions")
+    p.add_argument("--reveal", action="store_true", help="print questions with answers, no quiz")
 
     p = add("case", _case, "list, show or solve the practice cases")
     p.add_argument("action", choices=["list", "show", "solve"])
