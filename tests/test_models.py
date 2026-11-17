@@ -1,7 +1,7 @@
 import pytest
 
 from casemath.analysis.models import MODELS, get_model
-from casemath.core import UnknownCaseError, ValidationError
+from casemath.core import UnknownModelError, ValidationError
 
 
 @pytest.mark.parametrize("name", list(MODELS))
@@ -35,5 +35,5 @@ def test_ltv_cac() -> None:
 
 
 def test_unknown() -> None:
-    with pytest.raises(UnknownCaseError, match="available: profit"):
+    with pytest.raises(UnknownModelError, match="available: profit"):
         get_model("dcf")

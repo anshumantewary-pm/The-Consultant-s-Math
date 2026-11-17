@@ -6,6 +6,7 @@ import pytest
 from casemath.core import (
     Step,
     UnknownCaseError,
+    UnknownModelError,
     ValidationError,
     fmt_money,
     fmt_number,
@@ -105,6 +106,7 @@ def test_step_is_json_serialisable() -> None:
 def test_unknown_case_error_message() -> None:
     assert str(UnknownCaseError("no case 'x'")) == "no case 'x'"
     assert str(UnknownCaseError()) == "unknown case"
+    assert str(UnknownModelError()) == "unknown model"
 
 
 class TestRequireCount:

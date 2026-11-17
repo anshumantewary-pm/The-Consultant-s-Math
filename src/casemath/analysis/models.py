@@ -12,7 +12,7 @@ from casemath.analysis.model import Inputs, Model
 from casemath.calculators.finance import npv
 from casemath.calculators.profitability import profit_statement
 from casemath.calculators.unit_economics import lifetime_value
-from casemath.core.errors import UnknownCaseError, ValidationError
+from casemath.core.errors import UnknownModelError, ValidationError
 
 
 def _profit(x: Inputs) -> float:
@@ -82,4 +82,4 @@ def get_model(name: str) -> BuiltinModel:
     try:
         return MODELS[name]
     except KeyError:
-        raise UnknownCaseError(f"no model {name!r}; available: {', '.join(MODELS)}") from None
+        raise UnknownModelError(f"no model {name!r}; available: {', '.join(MODELS)}") from None
