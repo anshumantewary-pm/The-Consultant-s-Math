@@ -8,8 +8,9 @@ casemath is a layered library with a thin CLI on top. Each layer only imports fr
             └───────────────┬──────────────────────────┘
                             │
             ┌───────────────▼──────────────────────────┐
-  Use cases │  cases/   Case 1 profitability,          │
-            │           Case 2 market entry            │
+  Use cases │  cases/   1 profitability · 2 entry      │
+            │           3 pricing · 4 M&A synergy      │
+            │  drill.py random questions, checked      │
             └───────┬───────────────────────┬──────────┘
                     │                       │
    ┌────────────────▼──────────┐ ┌──────────▼───────────────┐
@@ -19,6 +20,7 @@ casemath is a layered library with a thin CLI on top. Each layer only imports fr
    │  market_share.py          │ │  mece.py  (checker)      │
    │  market_sizing.py         │ │  profitability.py (the   │
    │  growth.py                │ │   standard tree)         │
+   │  pricing.py · synergy.py  │ │                          │
    └────────────────┬──────────┘ └──────────┬───────────────┘
                     │                       │
             ┌───────▼───────────────────────▼──────────┐
@@ -35,9 +37,10 @@ casemath is a layered library with a thin CLI on top. Each layer only imports fr
 | Calculators | `casemath.calculators` | Pure math functions that return frozen result dataclasses | core |
 | Frameworks | `casemath.frameworks` | Issue tree model, MECE checker, the standard profitability tree | core |
 | Cases | `casemath.cases` | Practice cases: data + a `solve()` that chains calculators | calculators, frameworks, core |
+| Drill | `casemath.drill` | Seeded question generators whose answer key comes from the calculators; `run_drill` takes `ask`/`say` callables | calculators, core |
 | Interface | `casemath.cli` | Parse arguments, call the library, print text or JSON | everything |
 
-Calculators and frameworks do not import each other. The CLI is the only place that does I/O.
+Calculators and frameworks do not import each other. The CLI is the only place that does I/O: `drill.run_drill` asks and prints only through the `input`/`print` callables the CLI hands it.
 
 ## Design rules
 

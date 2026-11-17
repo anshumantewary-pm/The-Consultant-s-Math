@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "casemath"
-version = "0.1.0"
-description = "Consulting case math toolkit: profitability, break-even, market share, market sizing and MECE issue trees."
+version = "0.2.0"
+description = "Consulting case math toolkit: profitability, break-even, market share, market sizing, pricing, M&A synergies and MECE issue trees."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Anshuman Tewary" }]
-keywords = ["consulting", "case interview", "profitability", "break-even", "market share", "MECE"]
+keywords = ["consulting", "case interview", "profitability", "break-even", "market share", "pricing", "M&A", "MECE"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",

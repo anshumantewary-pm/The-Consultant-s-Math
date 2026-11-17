@@ -102,7 +102,7 @@ jobs:
         run: |
           {
             echo "## Practice case solutions"
-            for id in 1 2; do
+            for id in 1 2 3 4; do
               echo
               echo '```'
               casemath case solve "$id"
