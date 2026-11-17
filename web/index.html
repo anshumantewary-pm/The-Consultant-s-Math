@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Consultant's Math</title>
-<meta name="description" content="Consulting case math in the browser: profitability, break-even, market share, market sizing, MECE issue trees and two solved practice cases.">
+<meta name="description" content="Consulting case math in the browser: profitability, break-even, market share and sizing, NPV/IRR, pricing, unit economics, sensitivity, goal seek, Monte Carlo and four solved practice cases.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
@@ -79,7 +79,7 @@
   <header>
     <div>
       <h1>The Consultant's Math</h1>
-      <p class="tagline">Case-interview math in your browser: profit, break-even, market share, market sizing, MECE trees and two solved cases. Runs the real tested Python package, no server.</p>
+      <p class="tagline">Case-interview math in your browser: profit, break-even, market share and sizing, NPV/IRR, pricing, unit economics, sensitivity, goal seek, Monte Carlo and four solved cases. Runs the real tested Python package, no server.</p>
     </div>
     <div class="links">
       <span class="status"><span class="dot" id="dot"></span><span id="status">Loading Python…</span></span>
@@ -151,6 +151,66 @@ const TOOLS = [
       { flag: "--filter", repeat: true, label: "Filters", hint: "one per line: LABEL=FRACTION", type: "textarea", wide: true,
         value: "use public fast charging=0.3" },
     ] },
+  { group: "Finance & pricing" },
+  { id: "invest", title: "Investment appraisal", cmd: "invest",
+    blurb: "NPV, IRR, profitability index and payback (simple and discounted) for any cash-flow series. Year 0 first, usually negative.",
+    formula: "NPV = Σ CFₜ / (1 + r)ᵗ        IRR: the r where NPV = 0",
+    fields: [
+      { flag: "--rate", label: "Discount rate", hint: "per period, 0.1 = 10%", value: 0.1 },
+      { positional: true, dashDash: true, label: "Cash flows", hint: "one per line, year 0 first", type: "textarea", wide: true,
+        value: "-1000000\n300000\n300000\n300000\n300000\n300000" },
+    ] },
+  { id: "unit-econ", title: "Unit economics", cmd: "unit-econ",
+    blurb: "What a customer is worth over their lifetime vs what it costs to win them. Healthy: LTV/CAC ≥ 3× and CAC repaid before the average customer churns.",
+    formula: "LTV = Revenue × Margin / Churn        LTV/CAC        CAC payback = CAC / (Revenue × Margin)",
+    fields: [
+      { flag: "--revenue", label: "Revenue per customer per month", value: 120 },
+      { flag: "--margin", label: "Gross margin", hint: "fraction, 0.8 = 80%", value: 0.8 },
+      { flag: "--churn", label: "Monthly churn", hint: "fraction", value: 0.03 },
+      { flag: "--cac", label: "Acquisition cost (CAC)", value: 1800 },
+      { flag: "--discount-rate", label: "Monthly discount rate", hint: "optional", value: "" },
+    ] },
+  { id: "pricing", title: "Pricing", cmd: "pricing",
+    blurb: "Change: how much volume a price move needs. Elasticity: from two observed price/volume points. Optimal: the profit-maximising price.",
+    formula: "Volume needed = −ΔP / (CM + ΔP)        Linear demand: P* = (choke price + unit cost) / 2",
+    fields: [
+      { positional: true, label: "Question", type: "select", options: ["change", "elasticity", "optimal"], value: "change" },
+      { flag: "--change", label: "Price change", hint: "change: −0.1 = 10% cut", value: -0.1, skipIf: f => f.Question !== "change" },
+      { flag: "--margin", label: "Contribution margin", hint: "change: fraction", value: 0.3, skipIf: f => f.Question !== "change" },
+      { flag: "--elasticity", label: "Elasticity", hint: "optional, e.g. −2", value: -2, skipIf: f => f.Question === "elasticity" },
+      { flag: "--points", label: "Two observations", hint: "elasticity / optimal: P1,Q1,P2,Q2", value: "120,400,99,470", type: "text", skipIf: f => f.Question === "change" },
+      { flag: "--unit-cost", label: "Unit cost", hint: "optimal", value: 24, skipIf: f => f.Question !== "optimal" },
+    ] },
+  { group: "Analysis" },
+  { id: "sensitivity", title: "Sensitivity (tornado)", cmd: "sensitivity",
+    blurb: "Swing each input of a built-in model and rank them by how much they move the answer. The top bar is the assumption worth checking.",
+    fields: [
+      { positional: true, label: "Model", type: "select", options: ["profit", "npv", "ltv-cac"], value: "profit" },
+      { flag: "--pct", label: "Swing (when no ranges)", hint: "0.1 = ±10%", value: 0.1 },
+      { flag: "--set", repeat: true, label: "Override inputs", hint: "one per line: NAME=VALUE", type: "textarea", value: "" },
+      { flag: "--range", repeat: true, label: "Explicit ranges", hint: "one per line: NAME=LOW:HIGH", type: "textarea", value: "" },
+    ] },
+  { id: "goalseek", title: "Goal seek", cmd: "goalseek",
+    blurb: "Find the value of one input that makes the model hit a target: break-even volume, hurdle rate, required price.",
+    fields: [
+      { positional: true, label: "Model", type: "select", options: ["profit", "npv", "ltv-cac"], value: "profit" },
+      { flag: "--vary", label: "Input to solve for", value: "units", type: "text" },
+      { flag: "--target", label: "Target output", value: 0 },
+      { flag: "--between", label: "Search between", hint: "LOW:HIGH", value: "0:100000", type: "text" },
+      { flag: "--set", repeat: true, label: "Override inputs", hint: "one per line: NAME=VALUE", type: "textarea", value: "" },
+    ] },
+  { id: "simulate", title: "Monte Carlo", cmd: "simulate",
+    blurb: "Put ranges on the uncertain inputs and get a range on the answer: mean, 90% band, chance of a loss and a histogram. Seeded, so reruns match.",
+    formula: "Specs: 5 · uniform:LOW:HIGH · tri:LOW:MODE:HIGH · normal:MEAN:SD[:FLOOR[:CEIL]]",
+    fields: [
+      { positional: true, label: "Model", type: "select", options: ["profit", "npv", "ltv-cac"], value: "profit" },
+      { flag: "--dist", repeat: true, label: "Uncertain inputs", hint: "one per line: NAME=SPEC", type: "textarea", wide: true,
+        value: "units=tri:20000:40000:45000\nvariable_cost=normal:6:0.5" },
+      { flag: "--runs", label: "Runs", value: 10000 },
+      { flag: "--seed", label: "Seed", value: 42 },
+      { flag: "--threshold", label: "Report P(output below)", value: 0 },
+      { flag: "--set", repeat: true, label: "Override inputs", hint: "one per line: NAME=VALUE", type: "textarea", value: "" },
+    ] },
   { group: "Frameworks" },
   { id: "tree", title: "Profitability tree", cmd: "tree",
     blurb: "The standard framework as an issue tree, with a MECE check. Fill in numbers to see each node's value, or leave blank for the structure.",
@@ -162,10 +222,10 @@ const TOOLS = [
       { flag: "--hints", label: "Show the question to ask at each node", type: "checkbox", value: true },
     ] },
   { id: "case", title: "Practice cases", cmd: "case",
-    blurb: "Case 1: Brewline Beverages (profitability). Case 2: VoltWay EV charging (market entry). Read the prompt, try it yourself, then solve.",
+    blurb: "1 Brewline (profitability) · 2 VoltWay (market entry) · 3 Lumen Analytics (SaaS pricing) · 4 Northwind (investment under uncertainty). Read the prompt, try it yourself, then solve.",
     fields: [
       { positional: true, label: "Action", type: "select", options: ["solve", "show", "list"], value: "show" },
-      { positional: true, label: "Case", type: "select", options: ["1", "2"], value: "1", skipIf: f => f.Action === "list" },
+      { positional: true, label: "Case", type: "select", options: ["1", "2", "3", "4"], value: "1", skipIf: f => f.Action === "list" },
     ] },
 ];
 
@@ -245,7 +305,9 @@ function select(id) {
 }
 
 function buildArgv() {
+  // --json goes right after the command so it can never land after a "--" separator.
   const argv = [current.cmd];
+  if (document.getElementById("json")?.checked) argv.push("--json");
   const byLabel = {};
   current.fields.forEach((f, i) => {
     const node = document.getElementById(`f${i}`);
@@ -256,12 +318,12 @@ function buildArgv() {
     if (f.skipIf && f.skipIf(byLabel)) return;
     if (f.type === "checkbox") { if (v) argv.push(f.flag); return; }
     const lines = f.type === "textarea" ? String(v).split("\n").map(s => s.trim()).filter(Boolean) : [String(v).trim()];
+    if (f.dashDash && lines.some(Boolean)) argv.push("--");  // lets flows like -1e6 through
     for (const line of lines) {
       if (line === "") continue;
       if (f.positional) argv.push(line); else argv.push(f.flag, line);
     }
   });
-  if (document.getElementById("json")?.checked) argv.push("--json");
   return argv;
 }
 
