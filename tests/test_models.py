@@ -37,3 +37,12 @@ def test_ltv_cac() -> None:
 def test_unknown() -> None:
     with pytest.raises(UnknownModelError, match="available: profit"):
         get_model("dcf")
+
+
+def test_public_api() -> None:
+    import casemath.analysis as analysis
+
+    for name in analysis.__all__:
+        assert hasattr(analysis, name), name
+    result = analysis.simulate(lambda x: x["a"], {"a": analysis.Uniform(0, 1)}, runs=10)
+    assert isinstance(result, analysis.Simulation)

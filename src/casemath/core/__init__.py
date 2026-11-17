@@ -4,6 +4,7 @@ from casemath.core.errors import (
     CaseMathError,
     UnknownCaseError,
     UnknownModelError,
+    UnknownNameError,
     ValidationError,
 )
 from casemath.core.formatting import fmt_money, fmt_number, fmt_pct, fmt_signed_money
@@ -15,6 +16,7 @@ __all__ = [
     "Step",
     "UnknownCaseError",
     "UnknownModelError",
+    "UnknownNameError",
     "ValidationError",
     "fmt_money",
     "fmt_number",
