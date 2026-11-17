@@ -111,3 +111,59 @@ Use the pyramid: answer first, then support.
 > **Fix Juice first.** Juice unit costs rose 30% and explain 73% of the profit decline. The Energy Drinks price cut explains most of the rest: it cost $2.3M and the extra volume won back only $1.2M. Bottled Tea is healthy. Next step: price Juice to about $2.95 or renegotiate fruit contracts.
 
 Every number in that paragraph comes out of `casemath case solve 1`.
+
+## 5. Valuing an investment
+
+Payback ignores the time value of money and everything after the payback date. For anything with a multi-year life, use NPV.
+
+```
+Discount factor    = 1 / (1 + r)ᵗ
+NPV                = Σ CFₜ / (1 + r)ᵗ             (CF₀ is today, usually the negative capex)
+IRR                = the r at which NPV = 0
+Profitability index = PV of future flows / initial outlay
+Perpetuity         = CF / (r − g)                  (Gordon growth, needs r > g)
+```
+
+- **Decision rule:** invest when NPV > 0 at the cost of capital. IRR above the cost of capital usually says the same thing, but IRR can mislead when flows change sign more than once or when comparing projects of different size. When the two disagree, trust NPV.
+- **Discounted payback** is always later than simple payback; if a board asks for payback, give both.
+- casemath's `irr` brackets the root and bisects, so it never diverges, and it returns the lowest IRR when there are several.
+
+## 6. Pricing
+
+**Elasticity** = %Δ quantity / %Δ price. Below −1 is elastic (revenue falls when price rises); between −1 and 0 is inelastic. Use the *arc* (midpoint) version on two observed points so the answer does not depend on which point you call "before".
+
+**The volume a price move needs** to keep total contribution flat:
+
+```
+Volume change needed = −ΔP / (CM + ΔP)        ΔP and CM as fractions of today's price
+```
+
+A 10% cut at a 30% contribution margin needs **+50%** volume. At an 80% margin a 17.5% cut needs +28%. Compare that number with the elasticity you actually observe before agreeing to any cut. Case 3 turns on this.
+
+**The profit-maximising price.** With straight-line demand through two points, P* sits halfway between unit cost and the choke price (where demand hits zero). With constant elasticity e < −1, the Lerner rule gives P* = c × e / (1 + e).
+
+## 7. Customer unit economics
+
+```
+Lifetime (periods) = 1 / churn
+LTV                = revenue × gross margin / churn       (× (1 + d) / (d + churn) if discounted)
+CAC payback        = CAC / (revenue × gross margin)
+```
+
+Rules of thumb: **LTV/CAC ≥ 3×**, and CAC repaid well inside the average customer's lifetime. Because LTV divides by churn, a small improvement in retention moves LTV more than almost anything else. Run a tornado before arguing about price.
+
+## 8. Deciding under uncertainty
+
+A point estimate hides the risk. Four tools, from cheapest to richest:
+
+| Tool | Question it answers | casemath |
+|---|---|---|
+| **Tornado** | Which assumption moves the answer most? | `tornado`, `casemath sensitivity` |
+| **Goal seek** | How far can this input move before we lose money? | `goal_seek`, `casemath goalseek` |
+| **Scenarios** | What happens in a coherent downside / base / upside, and what is the probability-weighted answer? | `compare_scenarios` |
+| **Monte Carlo** | Across all the ranges at once, what is the chance of a loss and the 90% range? | `simulate`, `casemath simulate` |
+
+Two habits that separate a strong answer:
+
+1. **Mean ≠ base case.** When the ranges are skewed (savings that can fall a lot but rise a little), the simulated mean sits below the deterministic answer. Case 4 shows a $3.5M base-case NPV with a $1.6M simulated mean.
+2. **Turn risk into an action.** "21% chance of loss" is a finding; "we need 7.3% off the quote to get that under 10%" is a recommendation. Goal seek works on a simulated probability as well as on a single number, as long as the seed is fixed.
