@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from casemath import __version__
+from casemath.advisor import SECTORS, Profile, assess, parse_financials
 from casemath.analysis import (
     MODELS,
     BuiltinModel,
@@ -290,6 +291,88 @@ def _fmt_output(model: BuiltinModel, value: float) -> str:
     return f"{value:.2f}x" if model.output.endswith("CAC") else fmt_money(value)
 
 
+_PROFILE_FIELDS = (
+    "name",
+    "sector",
+    "revenue",
+    "cogs",
+    "opex",
+    "prior_revenue",
+    "growth",
+    "cash",
+    "debt",
+    "monthly_burn",
+    "arpu",
+    "churn",
+    "cac",
+)
+
+
+def _amount(value: float) -> str:
+    return fmt_money(value, compact=True, currency="")
+
+
+def _advise(args: argparse.Namespace) -> Output:
+    fields: dict[str, Any] = {}
+    if args.file:
+        try:
+            with open(args.file, encoding="utf-8-sig") as handle:
+                fields.update(parse_financials(handle.read()))
+        except OSError as error:
+            raise ValidationError(f"cannot read {args.file}: {error.strerror}") from None
+    for key in _PROFILE_FIELDS:
+        value = getattr(args, key)
+        if value is not None:
+            fields[key] = value
+    missing = [k for k in ("sector", "revenue", "cogs", "opex") if k not in fields]
+    if missing:
+        flags = ", ".join("--" + k.replace("_", "-") for k in missing)
+        raise ValidationError(f"missing {flags} (give them as flags or in --file)")
+    result = assess(Profile(**fields))
+    lines = [
+        f"{result.profile.name} · {result.sector.name}",
+        f"Health score       {result.score}/100 ({result.rating})",
+        "",
+    ]
+    for m in result.metrics:
+        shown = f"{m.value:.2f}x" if m.key == "leverage" else fmt_pct(m.value)
+        if m.high is not None and m.low is not None:
+            band = (
+                f"{m.low:.1f}x-{m.high:.1f}x"
+                if m.key == "leverage"
+                else f"{fmt_pct(m.low)}-{fmt_pct(m.high)}"
+            )
+        else:
+            band = f">= {fmt_pct(m.low or 0)}"
+        lines.append(f"{m.label:<36} {shown:>8}   sector {band:<14} {m.status}")
+    lines.append("")
+    for v in result.valuations:
+        lines.append(f"{v.method:<14} {_amount(v.low)} - {_amount(v.high)} (mid {_amount(v.mid)})")
+    lines.append(f"Equity value   {_amount(result.equity_low)} - {_amount(result.equity_high)}")
+    if result.break_even_revenue is not None:
+        lines.append(f"Break-even rev {_amount(result.break_even_revenue)}")
+    if result.runway_months is not None:
+        lines.append(f"Cash runway    {fmt_number(result.runway_months, 1)} months")
+    if result.unit_economics is not None:
+        lines.append(f"LTV / CAC      {float(result.unit_economics['ltv_to_cac']):.2f}x")
+    lines += ["", "Suggestions"]
+    for s in result.suggestions:
+        lines.append(f"  [{s.priority.upper()}] {s.area}: {s.title}")
+        lines.append(f"      {s.detail}")
+        lines += [f"      - {a}" for a in s.actions]
+    return Output("\n".join(lines), result.to_dict())
+
+
+def _sectors(args: argparse.Namespace) -> Output:
+    lines = [
+        f"{s.key:<14} {s.name:<36} gross {fmt_pct(s.gross_margin[0], 0)}-"
+        f"{fmt_pct(s.gross_margin[1], 0)}  EBITDA {fmt_pct(s.ebitda_margin[0], 0)}-"
+        f"{fmt_pct(s.ebitda_margin[1], 0)}"
+        for s in SECTORS.values()
+    ]
+    return Output("\n".join(lines), {k: s.to_dict() for k, s in SECTORS.items()})
+
+
 def _models(args: argparse.Namespace) -> Output:
     lines = []
     for m in MODELS.values():
@@ -516,6 +599,24 @@ def build_parser() -> argparse.ArgumentParser:
     group = p.add_mutually_exclusive_group(required=True)
     group.add_argument("--points", metavar="P1,Q1,P2,Q2", help="two observed price/volume points")
     group.add_argument("--elasticity", type=float, help="constant elasticity, below -1")
+
+    p = add("advise", _advise, "diagnose a company against its sector and suggest next steps")
+    p.add_argument("--file", help="CSV of metric,value rows (flags override it)")
+    p.add_argument("--name")
+    p.add_argument("--sector", choices=list(SECTORS))
+    p.add_argument("--revenue", type=float, help="annual revenue")
+    p.add_argument("--cogs", type=float, help="annual cost of goods sold")
+    p.add_argument("--opex", type=float, help="annual operating costs excluding COGS")
+    p.add_argument("--prior-revenue", type=float, help="last year's revenue")
+    p.add_argument("--growth", type=float, help="revenue growth as a fraction (overrides prior)")
+    p.add_argument("--cash", type=float)
+    p.add_argument("--debt", type=float)
+    p.add_argument("--monthly-burn", type=float)
+    p.add_argument("--arpu", type=float, help="monthly revenue per customer")
+    p.add_argument("--churn", type=float, help="monthly churn as a fraction")
+    p.add_argument("--cac", type=float, help="cost to acquire one customer")
+
+    add("sectors", _sectors, "list the sectors and benchmark ranges used by 'advise'")
 
     add("models", _models, "list the built-in models used by sensitivity, goalseek and simulate")
 

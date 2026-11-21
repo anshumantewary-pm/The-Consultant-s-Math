@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Business Advisor</title>
+<meta name="description" content="Enter or upload your company's figures, pick a sector, and get an automated health score, sector benchmark comparison, valuation range and prioritised suggestions.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f6f2; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a64; --line: #e4e1d8;
+    --accent: #1f5f4a; --accent-ink: #ffffff; --accent-soft: #e6f0ec; --code-bg: #fbfaf7;
+    --error: #a33a2b; --error-soft: #fbecea; --warn: #9a6a00; --warn-soft: #f8efd9;
+    --good: #1f7a55; --good-soft: #e3f2ea; --band: #d9e8e1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141513; --panel: #1c1d1b; --ink: #ecebe6; --muted: #9c9a92; --line: #2e2f2c;
+      --accent: #5fb393; --accent-ink: #0e1a15; --accent-soft: #1e2d27; --code-bg: #171816;
+      --error: #f08b7c; --error-soft: #2d1c19; --warn: #e2b54f; --warn-soft: #2c2615;
+      --good: #6cc59f; --good-soft: #1a2c23; --band: #24392f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141513; --panel: #1c1d1b; --ink: #ecebe6; --muted: #9c9a92; --line: #2e2f2c;
+    --accent: #5fb393; --accent-ink: #0e1a15; --accent-soft: #1e2d27; --code-bg: #171816;
+    --error: #f08b7c; --error-soft: #2d1c19; --warn: #e2b54f; --warn-soft: #2c2615;
+    --good: #6cc59f; --good-soft: #1a2c23; --band: #24392f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 Inter, system-ui, sans-serif; }
+  a { color: var(--accent); }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 22px; }
+  h1 { font: 600 30px/1.15 "Source Serif 4", Georgia, serif; margin: 0; letter-spacing: -0.01em; }
+  h2 { font: 600 21px/1.2 "Source Serif 4", Georgia, serif; margin: 0 0 4px; }
+  h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 26px 0 10px; font-weight: 600; }
+  .tagline { color: var(--muted); margin: 6px 0 0; max-width: 64ch; }
+  .links { font-size: 14px; display: flex; gap: 16px; align-items: center; }
+  .status { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #c9a227; }
+  .dot.ready { background: var(--accent); } .dot.fail { background: var(--error); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px; min-width: 0; margin-bottom: 20px; }
+  .blurb { color: var(--muted); margin: 0 0 18px; }
+  .drop { border: 1.5px dashed var(--line); border-radius: 10px; padding: 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; background: var(--code-bg); margin-bottom: 18px; }
+  .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop p { margin: 0; font-size: 14px; } .drop small { color: var(--muted); display: block; }
+  .btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 8px 14px; font: 500 14px Inter, sans-serif; cursor: pointer; }
+  .btn:hover { border-color: var(--accent); }
+  .run { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 10px 20px; font: 600 14px Inter, sans-serif; cursor: pointer; }
+  .run:disabled { opacity: .5; cursor: wait; }
+  fieldset { border: 0; padding: 0; margin: 0 0 14px; }
+  legend { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px 16px; }
+  label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 500; }
+  label small { color: var(--muted); font-weight: 400; }
+  input, select { font: 14px "JetBrains Mono", monospace; color: var(--ink); background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 8px; }
+  .msg { font-size: 13px; color: var(--muted); }
+  .msg.error { color: var(--error); }
+  .summary { display: grid; grid-template-columns: 180px 1fr; gap: 24px; align-items: center; }
+  .gauge { position: relative; width: 160px; height: 160px; }
+  .gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .gauge .num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .gauge .num b { font: 600 38px/1 "Source Serif 4", Georgia, serif; }
+  .gauge .num span { font-size: 12px; color: var(--muted); }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .pill.good { background: var(--good-soft); color: var(--good); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.bad { background: var(--error-soft); color: var(--error); }
+  .pill.info { background: var(--accent-soft); color: var(--muted); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .tile { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .tile .k { font-size: 12px; color: var(--muted); }
+  .tile .v { font: 600 20px/1.3 "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+  .tile .s { font-size: 12px; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  td.num { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bar { position: relative; height: 8px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 999px; min-width: 120px; }
+  .bar .band { position: absolute; top: 0; bottom: 0; background: var(--band); border-radius: 999px; }
+  .bar .mark { position: absolute; top: -4px; width: 3px; height: 14px; border-radius: 2px; background: var(--ink); transform: translateX(-1px); }
+  .sugg { border: 1px solid var(--line); border-left-width: 4px; border-radius: 10px; padding: 12px 16px; margin-bottom: 10px; }
+  .sugg.high { border-left-color: var(--error); } .sugg.medium { border-left-color: var(--warn); } .sugg.low { border-left-color: var(--accent); }
+  .sugg .head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-weight: 600; }
+  .sugg .area { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .sugg p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+  .sugg ul { margin: 8px 0 0; padding-left: 20px; font-size: 14px; }
+  .strengths { margin: 0; padding-left: 20px; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 18px; }
+  .scroll { overflow-x: auto; }
+  footer { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .hidden { display: none; }
+  @media (max-width: 640px) {
+    .summary { grid-template-columns: 1fr; justify-items: start; }
+    .panel { padding: 16px; }
+  }
+  @media print {
+    #input-panel, header .links, footer, .no-print { display: none !important; }
+    body { background: #fff; } .panel { border: 0; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Business Advisor</h1>
+      <p class="tagline">Type in or upload your company's figures, pick a sector, and get a health score, a comparison with sector benchmarks, a valuation range and suggestions written for that sector.</p>
+    </div>
+    <div class="links">
+      <span class="status"><span class="dot" id="dot"></span><span id="status">Loading engine…</span></span>
+      <a href="./">Calculators</a>
+      <a href="https://github.com/anshumantewary-pm/The-Consultant-s-Math">GitHub</a>
+    </div>
+  </header>
+
+  <section class="panel" id="input-panel">
+    <h2>1. Your company</h2>
+    <p class="blurb">Required: sector, revenue, cost of goods sold and operating costs (one year). The rest sharpens the advice.</p>
+
+    <div class="drop" id="drop">
+      <div>
+        <p><b>Upload a CSV</b> to fill the form</p>
+        <small>Rows like <code>revenue,4200000</code>, or several years: <code>revenue,3000000,4200000</code></small>
+      </div>
+      <div class="actions" style="margin:0">
+        <input type="file" id="file" accept=".csv,text/csv,text/plain" class="hidden">
+        <button class="btn" type="button" id="pick">Choose file</button>
+        <button class="btn" type="button" id="sample">Download template</button>
+        <button class="btn" type="button" id="example">Load example</button>
+      </div>
+    </div>
+
+    <form id="form" novalidate>
+      <fieldset>
+        <legend>Basics</legend>
+        <div class="grid">
+          <label>Company name<input id="name" type="text" placeholder="Acme Ltd"></label>
+          <label>Sector<select id="sector"></select></label>
+          <label>Currency<small>display only</small>
+            <select id="currency"><option value="₹">₹ INR</option><option value="$">$ USD</option><option value="€">€ EUR</option><option value="£">£ GBP</option><option value="">None</option></select>
+          </label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Income statement (annual)</legend>
+        <div class="grid">
+          <label>Revenue *<input id="revenue" type="number" step="any" inputmode="decimal" required></label>
+          <label>Cost of goods sold *<small>direct / variable costs</small><input id="cogs" type="number" step="any" inputmode="decimal" required></label>
+          <label>Operating costs *<small>salaries, rent, marketing; excl. COGS</small><input id="opex" type="number" step="any" inputmode="decimal" required></label>
+          <label>Last year's revenue<small>to compute growth</small><input id="prior_revenue" type="number" step="any" inputmode="decimal"></label>
+          <label>Revenue growth<small>or enter it directly, %</small><input id="growth" type="number" step="any" inputmode="decimal"></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Balance sheet and cash</legend>
+        <div class="grid">
+          <label>Cash<input id="cash" type="number" step="any" inputmode="decimal"></label>
+          <label>Debt<input id="debt" type="number" step="any" inputmode="decimal"></label>
+          <label>Monthly burn<small>if loss-making; else estimated</small><input id="monthly_burn" type="number" step="any" inputmode="decimal"></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Customers (optional, all three)</legend>
+        <div class="grid">
+          <label>Monthly revenue per customer<input id="arpu" type="number" step="any" inputmode="decimal"></label>
+          <label>Monthly churn<small>%</small><input id="churn" type="number" step="any" inputmode="decimal"></label>
+          <label>Customer acquisition cost<input id="cac" type="number" step="any" inputmode="decimal"></label>
+        </div>
+      </fieldset>
+      <div class="actions">
+        <button class="run" type="submit" id="run" disabled>Analyse</button>
+        <button class="btn" type="reset" id="clear">Clear</button>
+        <span class="msg" id="msg" aria-live="polite"></span>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel hidden" id="report" aria-live="polite"></section>
+
+  <footer>All the math runs in your browser on the tested <code>casemath.advisor</code> Python module (via Pyodide). Nothing you enter or upload leaves this page.</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+const NUM_FIELDS = ["revenue", "cogs", "opex", "prior_revenue", "growth", "cash", "debt", "monthly_burn", "arpu", "churn", "cac"];
+const PCT_FIELDS = new Set(["growth", "churn"]);  // the form shows %, the engine wants fractions
+const $ = id => document.getElementById(id);
+let py = null;
+let lastResult = null;
+
+const TEMPLATE = `metric,last year,this year
+company,Acme Cloud
+sector,saas
+revenue,3000000,4200000
+cogs,,1260000
+operating expenses,,3600000
+cash,,1500000
+debt,,0
+arpu,,500
+churn,,2.5%
+cac,,9000
+`;
+
+function setStatus(text, state) { $("status").textContent = text; $("dot").className = "dot" + (state ? " " + state : ""); }
+function msg(text, error) { $("msg").textContent = text; $("msg").className = "msg" + (error ? " error" : ""); }
+function el(tag, attrs = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "text") node.textContent = v; else if (k === "html") node.innerHTML = v; else if (v !== undefined && v !== null) node.setAttribute(k, v);
+  }
+  for (const c of [].concat(children)) if (c !== null && c !== undefined) node.append(c);
+  return node;
+}
+function cur() { return $("currency").value; }
+function money(x) {
+  if (x === null || x === undefined) return "—";
+  const sign = x < 0 ? "-" : "", m = Math.abs(x);
+  for (const [t, s] of [[1e9, "B"], [1e6, "M"], [1e3, "K"]]) if (m >= t) return `${sign}${cur()}${(m / t).toFixed(1)}${s}`;
+  return `${sign}${cur()}${m.toFixed(0)}`;
+}
+const pct = x => `${(x * 100).toFixed(1)}%`;
+
+function fillForm(fields) {
+  for (const [k, v] of Object.entries(fields)) {
+    const node = $(k);
+    if (!node) continue;
+    if (k === "sector") { if ([...node.options].some(o => o.value === v)) node.value = v; continue; }
+    node.value = PCT_FIELDS.has(k) ? +(v * 100).toFixed(4) : v;
+  }
+}
+
+function readForm() {
+  const body = { sector: $("sector").value };
+  const name = $("name").value.trim();
+  if (name) body.name = name;
+  for (const k of NUM_FIELDS) {
+    const raw = $(k).value.trim();
+    if (raw === "") continue;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) throw new Error(`${k.replace("_", " ")} is not a number`);
+    body[k] = PCT_FIELDS.has(k) ? n / 100 : n;
+  }
+  for (const k of ["revenue", "cogs", "opex"]) if (!(k in body)) throw new Error("Revenue, cost of goods sold and operating costs are required.");
+  const ue = ["arpu", "churn", "cac"].filter(k => k in body);
+  if (ue.length && ue.length < 3) throw new Error("Give all three customer fields (revenue per customer, churn, CAC) or none.");
+  return body;
+}
+
+async function loadFile(file) {
+  if (!file) return;
+  if (!py) { msg("Engine still loading, try again in a moment.", true); return; }
+  const text = await file.text();
+  const res = JSON.parse(py.parse(text));
+  if (!res.ok) { msg(res.error, true); return; }
+  const n = Object.keys(res.fields).length;
+  if (!n) { msg("No recognised rows in that file. Download the template to see the format.", true); return; }
+  $("form").reset();
+  fillForm(res.fields);
+  msg(`Loaded ${n} field${n === 1 ? "" : "s"} from ${file.name}. Check them, then Analyse.`);
+}
+
+function analyse() {
+  if (!py) return;
+  let body;
+  try { body = readForm(); } catch (e) { msg(e.message, true); return; }
+  const res = JSON.parse(py.advise(JSON.stringify(body)));
+  if (!res.ok) { msg(res.error, true); return; }
+  msg("");
+  lastResult = res.result;
+  renderReport(res.result);
+}
+
+function statusPill(m) {
+  if (m.status === "within") return el("span", { class: "pill good", text: "in range" });
+  if (m.status === "info") return el("span", { class: "pill info", text: "info" });
+  const good = (m.status === "above") === m.higher_is_better;
+  return el("span", { class: "pill " + (good ? "good" : "bad"), text: m.status === "above" ? "above range" : "below range" });
+}
+
+function rangeBar(m) {
+  if (m.low === null) return el("span");
+  const isX = m.key === "leverage";
+  const hi = m.high === null ? Math.max(m.low * 1.5, m.value) : m.high;
+  const lo = Math.min(m.low, m.value, 0), top = Math.max(hi, m.value) * 1.15 || 1;
+  const pos = v => `${Math.min(Math.max((v - lo) / (top - lo), 0), 1) * 100}%`;
+  const band = el("div", { class: "band" });
+  band.style.left = pos(m.low); band.style.right = `calc(100% - ${pos(m.high === null ? top : m.high)})`;
+  const mark = el("div", { class: "mark", title: isX ? `${m.value.toFixed(2)}x` : pct(m.value) });
+  mark.style.left = pos(m.value);
+  return el("div", { class: "bar", role: "img", "aria-label": "value against sector range" }, [band, mark]);
+}
+
+function gauge(score) {
+  const r = 70, c = 2 * Math.PI * r, color = score >= 75 ? "var(--good)" : score >= 50 ? "var(--warn)" : "var(--error)";
+  const box = el("div", { class: "gauge" });
+  box.innerHTML = `<svg viewBox="0 0 160 160" aria-hidden="true"><circle cx="80" cy="80" r="${r}" fill="none" stroke="var(--line)" stroke-width="12"/><circle cx="80" cy="80" r="${r}" fill="none" stroke="${color}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${c * score / 100} ${c}"/></svg>`;
+  box.append(el("div", { class: "num" }, [el("b", { text: String(score) }), el("span", { text: "out of 100" })]));
+  return box;
+}
+
+function tile(k, v, s) { return el("div", { class: "tile" }, [el("div", { class: "k", text: k }), el("div", { class: "v", text: v }), s ? el("div", { class: "s", text: s }) : null]); }
+
+function renderReport(r) {
+  const report = $("report");
+  const ratingClass = r.score >= 75 ? "good" : r.score >= 50 ? "warn" : "bad";
+  const high = r.suggestions.filter(s => s.priority === "high").length;
+
+  const summary = el("div", { class: "summary" }, [
+    gauge(r.score),
+    el("div", {}, [
+      el("h2", { text: `${r.profile.name} · ${r.sector.name}` }),
+      el("p", {}, [el("span", { class: `pill ${ratingClass}`, text: r.rating })]),
+      el("p", { class: "blurb", text: high
+        ? `${high} high-priority issue${high > 1 ? "s" : ""} found. Start with the red items below.`
+        : "No high-priority issues. See the suggestions below to push further." }),
+    ]),
+  ]);
+
+  const ue = r.unit_economics;
+  const ev = r.valuations;
+  const tiles = el("div", { class: "tiles" }, [
+    tile("Revenue", money(r.profile.revenue)),
+    tile("Gross profit", money(r.gross_profit)),
+    tile("EBITDA", money(r.ebitda), r.ebitda < 0 ? "loss-making" : null),
+    tile("Equity value", `${money(r.equity_low)}–${money(r.equity_high)}`, `mid ${money(r.equity_mid)}`),
+    r.break_even_revenue !== null ? tile("Break-even revenue", money(r.break_even_revenue), r.revenue_gap !== null ? `${money(r.revenue_gap)} to go` : "already above") : null,
+    r.runway_months !== null ? tile("Cash runway", `${r.runway_months.toFixed(1)} mo`) : null,
+    ue ? tile("LTV / CAC", `${ue.ltv_to_cac.toFixed(2)}x`, `payback ${ue.cac_payback_periods.toFixed(0)} months`) : null,
+  ]);
+
+  const rows = r.metrics.map(m => {
+    const isX = m.key === "leverage";
+    const fmt = v => isX ? `${v.toFixed(1)}x` : pct(v);
+    const range = m.low === null ? "—" : m.high === null ? `≥ ${fmt(m.low)}` : `${fmt(m.low)} – ${fmt(m.high)}`;
+    return el("tr", {}, [el("td", { text: m.label }), el("td", { class: "num", text: isX ? `${m.value.toFixed(2)}x` : pct(m.value) }),
+      el("td", { class: "num", text: range }), el("td", {}, [rangeBar(m)]), el("td", {}, [statusPill(m)])]);
+  });
+  const table = el("div", { class: "scroll" }, [el("table", {}, [
+    el("thead", {}, [el("tr", {}, ["Metric", "You", "Sector range", "", "Status"].map(h => el("th", { text: h })))]),
+    el("tbody", {}, rows),
+  ])]);
+
+  const valRows = ev.map(v => el("tr", {}, [el("td", { text: v.method }), el("td", { class: "num", text: money(v.base) }),
+    el("td", { class: "num", text: money(v.low) }), el("td", { class: "num", text: money(v.mid) }), el("td", { class: "num", text: money(v.high) })]));
+  const valTable = el("div", { class: "scroll" }, [el("table", {}, [
+    el("thead", {}, [el("tr", {}, ["Method", "Base", "Low", "Mid", "High"].map(h => el("th", { text: h })))]),
+    el("tbody", {}, valRows),
+  ])]);
+
+  const suggestions = r.suggestions.map(s => el("div", { class: `sugg ${s.priority}` }, [
+    el("div", { class: "head" }, [el("span", { class: `pill ${s.priority === "high" ? "bad" : s.priority === "medium" ? "warn" : "good"}`, text: s.priority }),
+      el("span", { text: s.title })]),
+    el("div", { class: "area", text: s.area }),
+    el("p", { text: s.detail }),
+    s.actions.length ? el("ul", {}, s.actions.map(a => el("li", { text: a }))) : null,
+  ]));
+
+  report.replaceChildren(
+    summary,
+    el("h3", { text: "Key numbers" }), tiles,
+    el("h3", { text: "Benchmarks" }), table,
+    el("h3", { text: "Valuation on sector multiples" }), valTable,
+    r.strengths.length ? el("h3", { text: "Strengths" }) : null,
+    r.strengths.length ? el("ul", { class: "strengths" }, r.strengths.map(s => el("li", { text: s }))) : null,
+    el("h3", { text: "Suggestions" }), ...suggestions,
+    el("div", { class: "actions no-print" }, [
+      el("button", { class: "btn", type: "button", id: "print", text: "Print / save as PDF" }),
+      el("button", { class: "btn", type: "button", id: "dl", text: "Download JSON" }),
+    ]),
+    el("p", { class: "note", text: "Sector ranges and multiples are indicative rules of thumb for screening, not market data for a specific company, region or date. Break-even treats COGS as variable and operating costs as fixed. Use this as a starting point for analysis, not as financial advice." }),
+  );
+  report.classList.remove("hidden");
+  $("print").onclick = () => window.print();
+  $("dl").onclick = () => download(`${(r.profile.name || "report").replace(/\W+/g, "-")}-assessment.json`, JSON.stringify(lastResult, null, 2), "application/json");
+  report.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function download(name, text, type) {
+  const a = el("a", { href: URL.createObjectURL(new Blob([text], { type })), download: name });
+  document.body.append(a); a.click(); a.remove();
+}
+
+const GLUE = `
+import json
+from casemath.advisor import SECTORS, Profile, assess, parse_financials
+from casemath.core.errors import CaseMathError
+
+def sectors():
+    return json.dumps([[k, s.name] for k, s in SECTORS.items()])
+
+def parse(text):
+    try:
+        return json.dumps({"ok": True, "fields": parse_financials(text)})
+    except CaseMathError as exc:
+        return json.dumps({"ok": False, "error": str(exc)})
+
+def advise(body_json):
+    try:
+        result = assess(Profile(**json.loads(body_json)))
+        return json.dumps({"ok": True, "result": result.to_dict()}, allow_nan=False)
+    except (CaseMathError, ValueError) as exc:
+        return json.dumps({"ok": False, "error": str(exc)})
+
+{"sectors": sectors, "parse": parse, "advise": advise}
+`;
+
+async function boot() {
+  try {
+    const manifest = await (await fetch("manifest.json", { cache: "no-store" })).json();
+    const pyodide = await loadPyodide();
+    await pyodide.loadPackage("micropip");
+    await pyodide.pyimport("micropip").install(new URL(manifest.wheel, location.href).href);
+    const fns = pyodide.runPython(GLUE).toJs({ dict_converter: Object.fromEntries });
+    py = fns;
+    for (const [k, name] of JSON.parse(py.sectors())) $("sector").append(el("option", { value: k, text: name }));
+    $("run").disabled = false;
+    setStatus(`casemath ${manifest.version} ready`, "ready");
+  } catch (err) {
+    console.error(err);
+    setStatus("Failed to load engine", "fail");
+    msg("Could not load the Python runtime: " + err.message, true);
+  }
+}
+
+$("form").addEventListener("submit", e => { e.preventDefault(); analyse(); });
+$("clear").addEventListener("click", () => { msg(""); $("report").classList.add("hidden"); });
+$("pick").addEventListener("click", () => $("file").click());
+$("file").addEventListener("change", e => { loadFile(e.target.files[0]); e.target.value = ""; });
+$("sample").addEventListener("click", () => download("company-template.csv", TEMPLATE, "text/csv"));
+$("example").addEventListener("click", () => { if (py) loadFile(new File([TEMPLATE], "example.csv")); });
+const drop = $("drop");
+for (const ev of ["dragenter", "dragover"]) drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); });
+for (const ev of ["dragleave", "drop"]) drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); });
+drop.addEventListener("drop", e => loadFile(e.dataTransfer.files[0]));
+boot();
+</script>
+</body>
+</html>

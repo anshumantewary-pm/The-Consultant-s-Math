@@ -32,7 +32,7 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p site
-          cp web/index.html site/
+          cp web/*.html site/
           cp dist/*.whl site/
           wheel=$(basename dist/*.whl)
           version=$(python -c "import casemath; print(casemath.__version__)")

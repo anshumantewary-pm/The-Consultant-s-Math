@@ -39,6 +39,7 @@ pip install -e ".[dev]"     # or: pip install .   (no dev tools)
 | **Frameworks** | `profitability_tree`, issue-tree `Node`, `render`, `check_mece` | `tree` |
 | **Practice cases** | `get_case("1").solve()` | `case list / show / solve` |
 | **Drill** | `drill.generate(topic, count, seed)`, `drill.run_drill` | `drill` |
+| **Business advisor** | `advisor.assess(Profile(...))`, `advisor.parse_financials(csv)`, 10 sector benchmarks | `advise`, `sectors` |
 | **Web UI** | `web.make_server`, `web.call` (JSON API over the CLI) | `serve` |
 
 ## CLI tour
@@ -100,6 +101,19 @@ casemath serve --open
 ```
 
 `casemath serve` runs a small standard-library HTTP server. The page posts JSON to `/api/<command>`; the body is turned into the same arguments the CLI takes and parsed by the CLI's own parser, so the browser and the terminal always give the same answers and the same errors.
+
+## Business advisor
+
+Give a sector and one year of figures (flags, or a CSV of `metric,value` rows) and get a health score, a comparison with the sector's ranges, a valuation range on sector multiples, break-even revenue, cash runway and prioritised, sector-specific suggestions.
+
+```bash
+casemath sectors
+casemath advise --sector saas --revenue 4200000 --cogs 1260000 --opex 3600000 \
+  --prior-revenue 3000000 --cash 1500000 --arpu 500 --churn 0.025 --cac 9000
+casemath advise --file company.csv --json
+```
+
+The same engine runs in the browser at `advisor.html` on the GitHub Pages site: upload a CSV (or download the template), check the form, click Analyse, then print the report or download it as JSON. Sector ranges are indicative screening rules of thumb, not market data.
 
 ## Library use
 

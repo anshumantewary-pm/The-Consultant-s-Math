@@ -2,6 +2,14 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Business Advisor: `casemath.advisor` compares a company's figures with indicative ranges for 10 sectors (SaaS, e-commerce, retail, manufacturing, restaurants, professional services, healthcare, fintech, logistics, consumer goods). It returns a 0-100 health score, gross/EBITDA/opex margins, growth, Rule of 40, debt/EBITDA, a valuation on sector multiples, break-even revenue, cash runway, unit economics and prioritised suggestions that use each sector's own levers. `parse_financials` reads an uploaded `metric,value` CSV (multi-year rows supported).
+- CLI: `advise` (flags or `--file data.csv`) and `sectors`.
+- Web: `advisor.html` on GitHub Pages lets you upload a CSV or fill in a form and get the report in the browser, with print-to-PDF and JSON download.
+
 ## [0.4.0] - 2026-11-18
 
 Combines the advanced-analytics work with 0.2.0 and 0.3.0 below.

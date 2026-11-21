@@ -53,3 +53,8 @@ def test_every_layer_is_covered() -> None:
 def test_drill_uses_only_core_and_calculators() -> None:
     # drill.py is a top-level module: question generators built on the calculators.
     assert casemath_imports(PACKAGE / "drill.py") <= {"core", "calculators"}
+
+
+def test_advisor_uses_only_core_and_calculators() -> None:
+    # advisor.py is a top-level module: sector benchmarks and rules on top of the calculators.
+    assert casemath_imports(PACKAGE / "advisor.py") <= {"core", "calculators"}
