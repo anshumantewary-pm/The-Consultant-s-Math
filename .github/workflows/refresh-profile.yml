@@ -1,0 +1,29 @@
+name: Refresh profile
+
+# Tells the profile repository to rebuild its contribution cards right after a push, so new
+# commits show on the profile within a couple of minutes. Needs a PROFILE_TOKEN secret: a
+# fine-grained token with "Contents: read and write" on anshumantewary-pm/anshumantewary-pm.
+# Without it the job does nothing (the profile still refreshes every 15 minutes).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Send refresh signal to the profile
+        env:
+          TOKEN: ${{ secrets.PROFILE_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then echo "PROFILE_TOKEN not set; the profile refreshes on its 15-minute schedule."; exit 0; fi
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/anshumantewary-pm/anshumantewary-pm/dispatches \
+            -d "{\"event_type\":\"refresh\",\"client_payload\":{\"repo\":\"${GITHUB_REPOSITORY}\"}}"
+          echo "Profile refresh requested."
