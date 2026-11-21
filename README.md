@@ -40,6 +40,7 @@ pip install -e ".[dev]"     # or: pip install .   (no dev tools)
 | **Practice cases** | `get_case("1").solve()` | `case list / show / solve` |
 | **Drill** | `drill.generate(topic, count, seed)`, `drill.run_drill` | `drill` |
 | **Business advisor** | `advisor.assess(Profile(...))`, `advisor.parse_financials(csv)`, 10 sector benchmarks | `advise`, `sectors` |
+| **CreditDecision** | `credit.decide(borrower_from_dict(json))`, `credit.render_memo`, `credit.monitor(status_from_dict(json))` | `credit`, `collect`, `industries` |
 | **Web UI** | `web.make_server`, `web.call` (JSON API over the CLI) | `serve` |
 
 ## CLI tour
@@ -115,6 +116,22 @@ casemath advise --file company.csv --json
 
 The same engine runs in the browser at `advisor.html` on the GitHub Pages site: upload a CSV (or download the template), check the form, click Analyse, then print the report or download it as JSON. Sector ranges are indicative screening rules of thumb, not market data.
 
+## CreditDecision (wholesale credit)
+
+Borrower file in, lending decision and credit memo out, then the same engine monitors the facility and runs collections. Built for commercial banking and wholesale credit (CIB): term loans and revolvers to mid-market and large corporates.
+
+```bash
+casemath credit examples/credit/northwind-industrial.json              # Approve, grade 4, Senior Credit Officer
+casemath credit examples/credit/coastal-retail.json --memo memo.md     # Refer: 3 policy exceptions
+casemath credit examples/credit/meridian-energy.json                   # Decline: KYC flag, CCC, DSCR < 1.0x
+casemath collect examples/credit/coastal-retail-q3-review.json         # Substandard, stage 2: restructure
+casemath collect examples/credit/meridian-default.json                 # Doubtful, NPA: recover
+```
+
+`decide()` spreads the financials, restates them pro forma for the new facility, rates the borrower on an 11-factor scorecard (10-grade master scale with PD), works out EAD, collateral LGD, Basel IRB capital and RAROC, runs hard-stop and exception checks from `BankPolicy`, and returns the decision, approver, covenants with headroom, the amount and margin that fit policy, conditions, risks and the early-warning triggers. `render_memo()` writes a 12-section credit memo from that object, so the memo cannot disagree with the decision ([sample](docs/credit/sample-memo-northwind.md)). `monitor()` tests covenants, raises early-warning signals, re-rates, classifies (US Pass to Loss, IFRS 9 stage, RBI SMA/NPA), computes ECL and picks a strategy from watchlist to recovery with a dated action plan.
+
+Architecture: [docs/credit/ARCHITECTURE.md](docs/credit/ARCHITECTURE.md). Competitor feature map: [docs/credit/COMPETITORS.md](docs/credit/COMPETITORS.md). Feature tracker: [docs/credit/feature-tracker.csv](docs/credit/feature-tracker.csv). Scorecard weights, haircuts and limits are indicative defaults, not a validated bank model.
+
 ## Library use
 
 ```python
@@ -185,11 +202,12 @@ src/casemath/
 ├── analysis/      model, sensitivity, goal_seek, scenarios, distributions,
 │                  montecarlo, models (built-in models for the CLI)
 ├── cases/         base, case_01 … case_06
+├── credit/        CreditDecision: model, analysis, rating, decision, memo, collections
 ├── drill.py       random practice questions with checked answers
 ├── web/           api (JSON over the CLI), server (http.server), index.html
 └── cli.py         argparse front end
 web/               GitHub Pages app that runs the package in the browser (Pyodide)
-tests/             one test module per area plus an import-layering check, 498 tests
+tests/             one test module per area plus an import-layering check, 583 tests
 docs/              PRD, architecture, frameworks guide, case write-ups
 ```
 

@@ -1,0 +1,22 @@
+{
+  "borrower": "Meridian Energy Services",
+  "industry": "energy",
+  "limit": 60000000,
+  "outstanding": 58000000,
+  "rate": 0.085,
+  "remaining_years": 3.0,
+  "origination_grade": 7,
+  "covenants": {"max_leverage": 4.0, "min_icr": 2.0},
+  "seniority": "senior_secured",
+  "collateral": [{"type": "equipment", "value": 42000000, "description": "Drilling fleet"}],
+  "days_past_due": 120,
+  "events": ["cross_default", "tax_arrears"],
+  "financials": [
+    {"period": "FY2024", "revenue": 150000000, "ebitda": 19000000, "interest_expense": 10000000,
+     "total_debt": 118000000, "cash": 4000000, "capex": 9000000, "taxes": 1000000,
+     "scheduled_principal": 15000000},
+    {"period": "FY2025", "revenue": 105000000, "ebitda": 6000000, "interest_expense": 11000000,
+     "total_debt": 125000000, "cash": 1000000, "capex": 3000000, "taxes": 0,
+     "scheduled_principal": 15000000}
+  ]
+}

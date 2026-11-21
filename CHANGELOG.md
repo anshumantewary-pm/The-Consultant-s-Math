@@ -6,6 +6,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ### Added
 
+- CreditDecision (`casemath.credit`) for commercial banking and wholesale credit: a borrower JSON file in, a lending decision and credit memo out. Spreading and pro forma for the new facility, debt capacity, an 11-factor rating scorecard on a 10-grade master scale, EAD with revolver CCF, collateral haircuts and LGD, Basel IRB capital, RAROC with a closed-form hurdle margin, hard stops and policy exceptions, decision (Approve / Approve with conditions / Refer / Decline), approval routing, covenants with headroom, conditions, risks with mitigants and early-warning triggers. All thresholds live in `BankPolicy`.
+- Collections: `credit.monitor` tests covenants, raises early-warning signals, re-rates against origination, classifies (US Pass to Loss, IFRS 9 stage, RBI SMA/NPA), computes ECL and recovery value, and picks a strategy (monitor, watchlist, remediate, restructure, recover) with a dated action plan.
+- CLI: `credit FILE [--memo PATH|-]`, `collect FILE`, `industries`. Examples in `examples/credit/`.
+- Docs: `docs/credit/ARCHITECTURE.md`, `docs/credit/COMPETITORS.md` (feature map of nCino, Moody's, S&P, Finastra, Aloan, CarbonAI, Taktile and monitoring/collections vendors, with sources), `docs/credit/feature-tracker.csv`, `docs/credit/competitor-features.mmd`, and a sample memo.
 - Business Advisor: `casemath.advisor` compares a company's figures with indicative ranges for 10 sectors (SaaS, e-commerce, retail, manufacturing, restaurants, professional services, healthcare, fintech, logistics, consumer goods). It returns a 0-100 health score, gross/EBITDA/opex margins, growth, Rule of 40, debt/EBITDA, a valuation on sector multiples, break-even revenue, cash runway, unit economics and prioritised suggestions that use each sector's own levers. `parse_financials` reads an uploaded `metric,value` CSV (multi-year rows supported).
 - CLI: `advise` (flags or `--file data.csv`) and `sectors`.
 - Web: `advisor.html` on GitHub Pages lets you upload a CSV or fill in a form and get the report in the browser, with print-to-PDF and JSON download.

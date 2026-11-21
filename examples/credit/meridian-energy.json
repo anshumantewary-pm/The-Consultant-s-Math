@@ -1,0 +1,22 @@
+{
+  "name": "Meridian Energy Services",
+  "industry": "energy",
+  "country": "Canada",
+  "description": "Oilfield services contractor; revenue tied to drilling activity in one basin.",
+  "kyc_flags": ["Adverse media: environmental enforcement action under review"],
+  "financials": [
+    {"period": "FY2023", "revenue": 180000000, "ebitda": 30000000, "interest_expense": 9000000,
+     "total_debt": 110000000, "cash": 6000000, "capex": 12000000, "taxes": 2000000,
+     "scheduled_principal": 15000000, "equity": 40000000},
+    {"period": "FY2024", "revenue": 150000000, "ebitda": 19000000, "interest_expense": 10000000,
+     "total_debt": 118000000, "cash": 4000000, "capex": 9000000, "taxes": 1000000,
+     "scheduled_principal": 15000000, "equity": 28000000}
+  ],
+  "request": {
+    "facility_type": "term_loan", "amount": 35000000, "tenor_years": 5,
+    "seniority": "senior_unsecured", "margin": 0.035, "amortisation": 0.0,
+    "purpose": "Fleet expansion"
+  },
+  "qualitative": {"management": 2, "market_position": 2, "financial_reporting": 2,
+                  "years_in_business": 9}
+}

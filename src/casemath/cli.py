@@ -50,6 +50,16 @@ from casemath.cases import get_case, list_cases, render_case, render_solution
 from casemath.cases.base import format_step
 from casemath.core.errors import CaseMathError, ValidationError
 from casemath.core.formatting import fmt_money, fmt_number, fmt_pct, fmt_signed_money
+from casemath.credit import (
+    INDUSTRIES,
+    borrower_from_dict,
+    decide,
+    monitor,
+    render_memo,
+    render_monitoring,
+    render_summary,
+    status_from_dict,
+)
 from casemath.drill import TOPICS, generate, run_drill
 from casemath.frameworks import check_mece, profitability_tree, render
 
@@ -373,6 +383,45 @@ def _sectors(args: argparse.Namespace) -> Output:
     return Output("\n".join(lines), {k: s.to_dict() for k, s in SECTORS.items()})
 
 
+def _read_json(path: str) -> Any:
+    try:
+        with open(path, encoding="utf-8-sig") as handle:
+            return json.load(handle)
+    except OSError as error:
+        raise ValidationError(f"cannot read {path}: {error.strerror}") from None
+    except json.JSONDecodeError as error:
+        raise ValidationError(f"{path} is not valid JSON: {error}") from None
+
+
+def _credit(args: argparse.Namespace) -> Output:
+    decision = decide(borrower_from_dict(_read_json(args.file)))
+    memo = render_memo(decision)
+    text = memo if args.memo == "-" else render_summary(decision)
+    if args.memo and args.memo != "-":
+        try:
+            with open(args.memo, "w", encoding="utf-8") as handle:
+                handle.write(memo)
+        except OSError as error:
+            raise ValidationError(f"cannot write {args.memo}: {error.strerror}") from None
+        text += f"\n\nCredit memo written to {args.memo}"
+    data = decision.to_dict()
+    data["memo_markdown"] = memo
+    return Output(text, data)
+
+
+def _collect(args: argparse.Namespace) -> Output:
+    result = monitor(status_from_dict(_read_json(args.file)))
+    return Output(render_monitoring(result), result.to_dict())
+
+
+def _industries(args: argparse.Namespace) -> Output:
+    lines = [
+        f"{i.key:<18} {i.name:<38} risk {i.risk}/5  max leverage {i.max_leverage:.1f}x"
+        for i in INDUSTRIES.values()
+    ]
+    return Output("\n".join(lines), {k: i.to_dict() for k, i in INDUSTRIES.items()})
+
+
 def _models(args: argparse.Namespace) -> Output:
     lines = []
     for m in MODELS.values():
@@ -617,6 +666,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--cac", type=float, help="cost to acquire one customer")
 
     add("sectors", _sectors, "list the sectors and benchmark ranges used by 'advise'")
+
+    p = add("credit", _credit, "CreditDecision: borrower file in, lending decision and memo out")
+    p.add_argument("file", help="borrower JSON (see examples/credit/)")
+    p.add_argument("--memo", metavar="PATH", help="write the credit memo (Markdown); '-' prints it")
+
+    p = add("collect", _collect, "monitor a live facility: early warnings, staging, workout plan")
+    p.add_argument("file", help="facility status JSON (see examples/credit/)")
+
+    add("industries", _industries, "list the industries and leverage ceilings used by 'credit'")
 
     add("models", _models, "list the built-in models used by sensitivity, goalseek and simulate")
 

@@ -1,0 +1,23 @@
+{
+  "borrower": "Coastal Retail Group",
+  "industry": "retail",
+  "limit": 40000000,
+  "outstanding": 37500000,
+  "rate": 0.0725,
+  "remaining_years": 2.0,
+  "origination_grade": 7,
+  "covenants": {"max_leverage": 4.25, "min_icr": 2.5, "min_dscr": 1.1},
+  "seniority": "senior_secured",
+  "collateral": [{"type": "inventory", "value": 70000000}],
+  "days_past_due": 12,
+  "utilisation_history": [0.45, 0.70, 0.94],
+  "events": ["late_reporting"],
+  "financials": [
+    {"period": "LTM Q3-2024", "revenue": 598000000, "ebitda": 47000000, "interest_expense": 14000000,
+     "total_debt": 190000000, "cash": 9000000, "capex": 17000000, "taxes": 4000000,
+     "scheduled_principal": 8000000, "current_assets": 185000000, "current_liabilities": 158000000},
+    {"period": "LTM Q3-2025", "revenue": 540000000, "ebitda": 38000000, "interest_expense": 16500000,
+     "total_debt": 205000000, "cash": 5000000, "capex": 12000000, "taxes": 2000000,
+     "scheduled_principal": 8000000, "current_assets": 170000000, "current_liabilities": 176000000}
+  ]
+}

@@ -1,0 +1,38 @@
+id,capability,lifecycle_stage,seen_at,creditdecision_status,module,priority,notes
+F01,Borrower file schema and validation,Intake,nCino; Moody's,Built,credit/model.py,P0,JSON in; every bad field named in the error
+F02,Financial statement spreading from PDF/XLSX (OCR),Intake,nCino; Moody's; Aloan; CarbonAI,Planned,-,P1,Keep source page/cell on each figure for traceability
+F03,Accounting / ERP data feeds,Intake,Parallel-style integrations; nCino,Planned,-,P2,Map to Financials dataclass
+F04,KYC / sanctions / adverse-media flags as hard stops,Intake,nCino; Moody's,Built,credit/decision.py,P0,Flags supplied by KYC vendor; any open flag declines and notches rating
+F05,Multi-period ratio spread and trends,Analysis,nCino; Moody's; S&P; Aloan,Built,credit/analysis.py,P0,"Leverage, net leverage, ICR, DSCR, FCF, payback, current ratio, gearing"
+F06,Pro forma restatement for the new facility,Analysis,-,Built,credit/analysis.py,P0,Refinanced debt removed pro rata with its interest and amortisation
+F07,Debt capacity (leverage and DSCR headroom),Analysis,-,Built,credit/analysis.py,P0,Recommended amount = min(request; capacity; hold-limit room)
+F08,Internal rating scorecard and master scale,Risk,Moody's; S&P,Built,credit/rating.py,P0,"11 factors, 10 grades, documented down-only overrides"
+F09,EAD with revolver CCF,Risk,Moody's; S&P,Built,credit/analysis.py,P0,75% CCF on undrawn
+F10,Collateral haircuts and LGD,Risk,Moody's; S&P,Built,credit/analysis.py,P0,Secured 20% / unsecured 40% / subordinated 75%
+F11,Basel IRB capital and RWA,Risk,-,Built,credit/analysis.py,P0,Tested against Basel reference RW 92.3% at PD 1% LGD 45% M 2.5
+F12,RAROC and hurdle-margin solve,Pricing,-,Built,credit/analysis.py,P0,Closed-form required margin
+F13,Policy engine: hard stops and soft exceptions,Decision,Aloan; Taktile (partial),Built,credit/decision.py,P0,All thresholds in BankPolicy
+F14,Decision recommendation (Approve / Conditions / Refer / Decline),Decision,Taktile (partial),Built,credit/decision.py,P0,
+F15,Approval authority routing,Decision,-,Built,credit/decision.py,P0,Exceptions move approval one tier up
+F16,Covenant package with headroom,Structuring,-,Built,credit/decision.py,P0,About 25% headroom to pro forma; capped by policy
+F17,Conditions precedent and risks with mitigants,Structuring,nCino; S&P,Built,credit/decision.py,P0,Risks from the three weakest factors
+F18,Credit memo generation (12 sections),Memo,nCino; Moody's; S&P; Aloan; CarbonAI; Taktile; TD Credit Assist,Built,credit/memo.py,P0,Rendered from the decision object only
+F19,Figures traceable to formulas,Memo,S&P (citations); Aloan,Built,credit/memo.py,P0,Source-document tracing depends on F02
+F20,LLM narrative layer with inline citations to engine fields,Memo,nCino Banking Advisor; S&P; Moody's,Planned,-,P1,Must fail if prose contains a number not in decision.to_dict()
+F21,Configurable memo templates,Memo,nCino; S&P; Aloan,Planned,-,P2,
+F22,Word / PDF export of memo,Memo,nCino; S&P,Planned,-,P2,Markdown today
+F23,Stress testing of the decision,Analysis,Moody's; S&P (scenario analysis),Planned,casemath.analysis,P1,Reuse tornado / Monte Carlo on decide()
+F24,Approval workflow and audit trail,Workflow,nCino; Moody's,Planned,-,P1,
+F25,Covenant monitoring,Monitoring,nCino; Moody's; Aloan; CarbonAI,Built,credit/collections.py,P0,Headroom and breach per covenant
+F26,Early-warning signals,Monitoring,nCino; Moody's; Botminds; Biz2X; Linedata,Built,credit/collections.py,P0,"DPD, covenants, trends, utilisation, migration, 10 credit events"
+F27,Re-rating and migration since origination,Monitoring,Moody's,Built,credit/collections.py,P0,Same scorecard as origination
+F28,US regulatory classification (Pass to Loss),Collections,-,Built,credit/collections.py,P0,
+F29,IFRS 9 staging and ECL,Collections,-,Built,credit/collections.py,P0,12-month vs lifetime PD
+F30,RBI SMA / NPA buckets,Collections,-,Built,credit/collections.py,P0,
+F31,Collections / workout strategy and dated playbook,Collections,nCino; Finastra; Newgen; Botminds,Built,credit/collections.py,P0,monitor / watchlist / remediate / restructure / recover
+F32,Recovery estimate,Collections,-,Built,credit/collections.py,P0,Outstanding x (1 - LGD)
+F33,Portfolio watchlist dashboard,Monitoring,Botminds; Biz2X; Linedata,Planned,-,P1,Run monitor() across a book
+F34,External ratings and market data,Intake,Moody's; S&P,Planned,-,P2,
+F35,Loan servicing and billing,Servicing,Finastra Loan IQ,Out of scope,-,-,Integrate rather than build
+F36,Syndicated loan support,Servicing,Finastra Loan IQ,Planned,-,P3,
+F37,Bank model plug-ins (PD / LGD),Risk,Moody's; S&P,Planned,-,P2,Same Rating / CollateralCover interfaces

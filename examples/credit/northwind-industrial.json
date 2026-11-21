@@ -1,0 +1,32 @@
+{
+  "name": "Northwind Industrial Holdings",
+  "group": "Northwind Group",
+  "industry": "manufacturing",
+  "country": "United Kingdom",
+  "description": "Mid-cap maker of precision components for aerospace and automotive OEMs, with five plants in the UK and Poland and a 20-year relationship with its top three customers.",
+  "existing_exposure": 20000000,
+  "financials": [
+    {"period": "FY2023", "revenue": 410000000, "ebitda": 61000000, "interest_expense": 7200000,
+     "total_debt": 120000000, "cash": 18000000, "capex": 14000000, "taxes": 9000000,
+     "scheduled_principal": 12000000, "current_assets": 150000000, "current_liabilities": 95000000,
+     "equity": 210000000},
+    {"period": "FY2024", "revenue": 446000000, "ebitda": 68000000, "interest_expense": 7600000,
+     "total_debt": 115000000, "cash": 22000000, "capex": 15000000, "taxes": 10000000,
+     "scheduled_principal": 12000000, "current_assets": 162000000, "current_liabilities": 98000000,
+     "equity": 232000000}
+  ],
+  "request": {
+    "facility_type": "term_loan", "amount": 75000000, "tenor_years": 5,
+    "seniority": "senior_secured", "base_rate": 0.045, "margin": 0.0225, "upfront_fee": 0.0075,
+    "amortisation": 0.10, "refinances": 30000000,
+    "purpose": "Refinance a 30M bilateral loan and fund a new plant in Wroclaw"
+  },
+  "collateral": [
+    {"type": "real_estate", "value": 70000000, "description": "Freehold plants (UK)"},
+    {"type": "equipment", "value": 40000000, "description": "Plant and machinery"},
+    {"type": "receivables", "value": 25000000, "description": "Trade receivables"}
+  ],
+  "qualitative": {"management": 4, "market_position": 4, "financial_reporting": 4,
+                  "years_in_business": 32,
+                  "notes": "Experienced management team; CFO joined from a listed peer in 2021."}
+}

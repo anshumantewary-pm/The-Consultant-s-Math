@@ -1,0 +1,27 @@
+{
+  "name": "Coastal Retail Group",
+  "industry": "retail",
+  "country": "United States",
+  "description": "Regional chain of 140 home-goods stores, sponsor-owned since 2021, with a growing e-commerce channel.",
+  "financials": [
+    {"period": "FY2023", "revenue": 620000000, "ebitda": 52000000, "interest_expense": 13000000,
+     "total_debt": 165000000, "cash": 12000000, "capex": 18000000, "taxes": 5000000,
+     "scheduled_principal": 8000000, "current_assets": 190000000, "current_liabilities": 150000000,
+     "equity": 95000000},
+    {"period": "FY2024", "revenue": 598000000, "ebitda": 47000000, "interest_expense": 14000000,
+     "total_debt": 170000000, "cash": 9000000, "capex": 17000000, "taxes": 4000000,
+     "scheduled_principal": 8000000, "current_assets": 185000000, "current_liabilities": 158000000,
+     "equity": 88000000}
+  ],
+  "request": {
+    "facility_type": "revolver", "amount": 40000000, "tenor_years": 3,
+    "seniority": "senior_secured", "base_rate": 0.045, "margin": 0.0275,
+    "upfront_fee": 0.005, "commitment_fee": 0.004, "expected_utilisation": 0.5,
+    "purpose": "Seasonal inventory build ahead of the holiday season"
+  },
+  "collateral": [
+    {"type": "inventory", "value": 85000000, "description": "Store and DC inventory (borrowing base)"}
+  ],
+  "qualitative": {"management": 3, "market_position": 3, "financial_reporting": 3,
+                  "years_in_business": 18}
+}

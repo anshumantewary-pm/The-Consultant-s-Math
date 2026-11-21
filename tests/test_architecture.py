@@ -13,6 +13,8 @@ ALLOWED = {
     "frameworks": {"core", "frameworks"},
     "analysis": {"core", "analysis"},
     "cases": {"core", "calculators", "frameworks", "analysis", "cases"},
+    # CreditDecision is self-contained on top of core.
+    "credit": {"core", "credit"},
     # Interface: the local web UI sits on top of the CLI, like cli.py itself.
     "web": {"core", "calculators", "frameworks", "analysis", "cases", "cli", "drill", "web"},
 }

@@ -51,6 +51,7 @@ casemath is a layered library with a thin CLI on top. Each layer only imports fr
 | Frameworks | `casemath.frameworks` | Issue tree model, MECE checker, the standard profitability tree | core |
 | Analysis | `casemath.analysis` | Model-agnostic tools: sensitivity (one-way, tornado, two-way), goal seek, scenarios, Monte Carlo. Only `models.py` (the CLI's built-in models) imports calculators | core (+ calculators in `models.py`) |
 | Cases | `casemath.cases` | Practice cases: data + a `solve()` that chains calculators and analysis | analysis, calculators, frameworks, core |
+| Credit | `casemath.credit` | CreditDecision: borrower file to lending decision, credit memo, monitoring and collections. See [credit/ARCHITECTURE.md](credit/ARCHITECTURE.md) | core |
 | Drill | `casemath.drill` | Seeded question generators whose answer key comes from the calculators; `run_drill` takes `ask`/`say` callables | calculators, core |
 | Interface | `casemath.cli` | Parse arguments, call the library, print text or JSON | everything |
 | Web | `casemath.web` | Turn a JSON body into CLI arguments, run the CLI handler, serve the page | cli, drill |
