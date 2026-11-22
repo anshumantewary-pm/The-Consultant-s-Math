@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CreditDecision</title>
+<meta name="description" content="Wholesale credit in the browser: borrower file in, lending decision and credit memo out, then covenant monitoring, staging and a collections plan.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07070a; --bg-2: #0e0e12; --panel: rgba(28, 28, 34, .62); --panel-solid: #16161b;
+    --ink: #f4f2ee; --muted: #9b98a3; --line: rgba(255, 255, 255, .09); --line-strong: rgba(255, 255, 255, .16);
+    --accent: #ff5a1f; --accent-2: #ff8a3d; --accent-ink: #ffffff; --accent-soft: rgba(255, 90, 31, .14);
+    --code-bg: rgba(255, 255, 255, .04); --error: #ff6b5a; --error-soft: rgba(255, 107, 90, .14);
+    --warn: #f5b340; --warn-soft: rgba(245, 179, 64, .14); --good: #4fd1a1; --good-soft: rgba(79, 209, 161, .13);
+    --band: rgba(255, 138, 61, .28); --glow: rgba(255, 80, 20, .55);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 Inter, system-ui, sans-serif; overflow-x: hidden; }
+  a { color: var(--accent-2); }
+  code { font-family: "JetBrains Mono", monospace; font-size: .92em; color: var(--accent-2); }
+
+  /* ambient glow */
+  .aura { position: absolute; left: 0; right: 0; top: 0; height: 1500px; pointer-events: none; z-index: 0; overflow: hidden; }
+  .aura::before { content: ""; position: absolute; left: 50%; top: -420px; width: 1100px; height: 1100px; transform: translateX(-50%);
+    background: radial-gradient(closest-side, transparent 52%, rgba(255, 90, 31, .55) 60%, rgba(255, 60, 10, .18) 68%, transparent 74%),
+                radial-gradient(closest-side, rgba(255, 110, 40, .28), transparent 70%);
+    filter: blur(18px); animation: breathe 9s ease-in-out infinite; }
+  .aura::after { content: ""; position: absolute; right: -260px; top: 55%; width: 620px; height: 620px;
+    background: radial-gradient(closest-side, rgba(255, 100, 20, .32), transparent 70%); filter: blur(30px); }
+  .swirl { position: absolute; left: 50%; top: -360px; width: 980px; height: 980px; transform: translateX(-50%); border-radius: 50%;
+    background: conic-gradient(from 200deg, transparent 0 18%, rgba(255, 120, 50, .5) 26%, transparent 34%, transparent 52%, rgba(255, 70, 20, .45) 62%, transparent 72%);
+    mask: radial-gradient(closest-side, transparent 58%, #000 62%, #000 70%, transparent 74%);
+    -webkit-mask: radial-gradient(closest-side, transparent 58%, #000 62%, #000 70%, transparent 74%);
+    filter: blur(6px); animation: spin 40s linear infinite; opacity: .9; }
+  @keyframes spin { to { transform: translateX(-50%) rotate(360deg); } }
+  @keyframes breathe { 50% { opacity: .75; transform: translateX(-50%) scale(1.04); } }
+  @keyframes float { 50% { transform: translateY(-10px); } }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+  .wrap { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 22px 16px 56px; }
+
+  /* top bar */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; color: var(--ink); text-decoration: none; }
+  .brand .logo { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--accent-2), var(--accent)); box-shadow: 0 0 18px var(--glow); font: 700 14px Inter; color: #fff; }
+  .pillnav { display: flex; gap: 4px; padding: 5px; border-radius: 999px; background: rgba(20, 20, 24, .7); border: 1px solid var(--line-strong); backdrop-filter: blur(10px); }
+  .pillnav a { padding: 7px 16px; border-radius: 999px; color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 500; transition: color .2s, background .2s; }
+  .pillnav a:hover { color: var(--ink); }
+  .pillnav a.on { background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: #fff; box-shadow: 0 4px 18px var(--glow); }
+  .status { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: rgba(20, 20, 24, .7); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 10px var(--warn); animation: pulse 1.4s ease-in-out infinite; }
+  .dot.ready { background: var(--good); box-shadow: 0 0 10px var(--good); animation: none; }
+  .dot.fail { background: var(--error); box-shadow: 0 0 10px var(--error); animation: none; }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  /* hero */
+  .hero { position: relative; text-align: center; padding: 88px 0 56px; }
+  .hero h1 { font: 600 clamp(36px, 6.2vw, 64px)/1.06 Inter, system-ui, sans-serif; letter-spacing: -0.035em; margin: 0 auto; max-width: 15ch;
+    background: linear-gradient(180deg, #fff 30%, #ffd9c4); -webkit-background-clip: text; background-clip: text; color: transparent; animation: rise .8s ease both; }
+  .hero p { color: var(--muted); max-width: 54ch; margin: 18px auto 30px; font-size: 16px; animation: rise .8s .1s ease both; }
+  .chip { position: absolute; display: flex; align-items: center; gap: 8px; padding: 7px 8px 7px 14px; border-radius: 999px; font-size: 13px; color: #ddd;
+    background: rgba(20, 20, 24, .75); border: 1px solid var(--line-strong); backdrop-filter: blur(8px); animation: float 6s ease-in-out infinite; }
+  .chip i { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line-strong); display: grid; place-items: center; font-style: normal; font-size: 11px; color: var(--accent-2); }
+  .chip.c1 { left: 0; top: 70px; } .chip.c2 { left: 5%; top: 160px; animation-delay: -2s; }
+  .chip.c3 { right: 0; top: 70px; animation-delay: -1s; } .chip.c4 { right: 5%; top: 160px; animation-delay: -3s; }
+  .cta { display: inline-flex; align-items: center; gap: 10px; border: 0; cursor: pointer; text-decoration: none; color: #fff; font: 600 14px Inter, sans-serif;
+    padding: 12px 14px 12px 22px; border-radius: 12px; background: linear-gradient(180deg, var(--accent-2), var(--accent));
+    box-shadow: 0 8px 30px var(--glow), inset 0 1px 0 rgba(255, 255, 255, .3); transition: transform .15s, box-shadow .2s; animation: rise .8s .2s ease both; }
+  .cta:hover { transform: translateY(-2px); box-shadow: 0 12px 40px var(--glow), inset 0 1px 0 rgba(255, 255, 255, .3); }
+  .cta .arr { width: 22px; height: 22px; border-radius: 6px; background: #fff; color: var(--accent); display: grid; place-items: center; font-size: 13px; }
+
+  /* preview cards */
+  .previews { display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 18px; align-items: center; margin: 8px auto 70px; max-width: 900px; }
+  .pcard { border-radius: 18px; padding: 16px; background: linear-gradient(160deg, rgba(48, 48, 56, .75), rgba(18, 18, 22, .85)); border: 1px solid var(--line-strong);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, .5); backdrop-filter: blur(12px); animation: rise .9s ease both; }
+  .pcard.mid { transform: translateY(-18px); padding: 18px; animation-delay: .15s; }
+  .pcard:nth-child(3) { animation-delay: .3s; }
+  .pcard .t { font-size: 13px; color: var(--ink); display: flex; justify-content: space-between; margin-bottom: 12px; }
+  .pcard .t span { color: var(--accent-2); font-size: 11px; }
+  .prow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 10px; border-radius: 10px; font-size: 12px; }
+  .prow + .prow { margin-top: 4px; } .prow.hi { background: rgba(255, 255, 255, .05); }
+  .prow b { font: 500 12px "JetBrains Mono", monospace; }
+  .prow small { color: var(--muted); display: block; font-size: 10.5px; }
+  .tag { padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 600; }
+  .tag.g { background: var(--good-soft); color: var(--good); } .tag.b { background: var(--error-soft); color: var(--error); } .tag.w { background: var(--warn-soft); color: var(--warn); }
+  .big { font: 600 30px/1 Inter; letter-spacing: -0.02em; margin: 10px 0 2px; }
+  .big small { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .spark { width: 100%; height: 90px; display: block; margin-top: 6px; }
+
+  .logos { text-align: center; color: var(--muted); font-size: 12.5px; margin-bottom: 70px; }
+  .logos div { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 34px; margin-top: 16px; font-weight: 600; color: #6f6c77; font-size: 14px; letter-spacing: .02em; }
+
+  .section-head { text-align: center; margin: 0 auto 28px; }
+  .section-head h2 { font: 600 clamp(26px, 3.6vw, 36px)/1.15 Inter; letter-spacing: -0.025em; margin: 0; }
+  .section-head p { color: var(--muted); margin: 10px 0 0; }
+
+  /* panels */
+  .panel { position: relative; background: linear-gradient(160deg, rgba(40, 40, 48, .66), rgba(16, 16, 20, .8)); border: 1px solid var(--line-strong);
+    border-radius: 22px; padding: 28px; min-width: 0; margin-bottom: 24px; backdrop-filter: blur(14px); box-shadow: 0 30px 80px rgba(0, 0, 0, .45); }
+  .panel::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: radial-gradient(600px 220px at 85% 0%, rgba(255, 100, 30, .12), transparent 70%); }
+  h2 { font: 600 22px/1.2 Inter, system-ui, sans-serif; letter-spacing: -0.02em; margin: 0 0 4px; }
+  h3 { font-size: 11.5px; text-transform: uppercase; letter-spacing: .12em; color: var(--accent-2); margin: 30px 0 12px; font-weight: 600; }
+  .blurb { color: var(--muted); margin: 0 0 20px; }
+  .drop { position: relative; border: 1.5px dashed var(--line-strong); border-radius: 16px; padding: 18px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+    justify-content: space-between; background: rgba(255, 255, 255, .025); margin-bottom: 22px; transition: border-color .2s, background .2s; }
+  .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop p { margin: 0; font-size: 14px; } .drop small { color: var(--muted); display: block; margin-top: 2px; }
+  .btn { border: 1px solid var(--line-strong); background: rgba(255, 255, 255, .04); color: var(--ink); border-radius: 10px; padding: 9px 15px; font: 500 13.5px Inter, sans-serif; cursor: pointer; transition: border-color .2s, background .2s; }
+  .btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .run { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: #fff; border: 0; border-radius: 12px;
+    padding: 12px 22px; font: 600 14px Inter, sans-serif; cursor: pointer; box-shadow: 0 8px 28px var(--glow), inset 0 1px 0 rgba(255, 255, 255, .3); transition: transform .15s; }
+  .run:hover:not(:disabled) { transform: translateY(-1px); }
+  .run:disabled { opacity: .45; cursor: wait; box-shadow: none; }
+  fieldset { border: 0; padding: 0; margin: 0 0 18px; }
+  legend { font-size: 12px; font-weight: 600; margin-bottom: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px 16px; }
+  label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500; }
+  label small { color: var(--muted); font-weight: 400; }
+  input, select { font: 14px "JetBrains Mono", monospace; color: var(--ink); background: rgba(0, 0, 0, .35); border: 1px solid var(--line-strong); border-radius: 10px;
+    padding: 10px 12px; width: 100%; transition: border-color .2s, box-shadow .2s; }
+  select option { background: var(--panel-solid); }
+  input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 10px; }
+  .msg { font-size: 13px; color: var(--muted); } .msg.error { color: var(--error); }
+
+  /* report */
+  #report:not(.hidden) { animation: rise .6s ease both; }
+  .summary { display: grid; grid-template-columns: 190px 1fr; gap: 28px; align-items: center; }
+  .gauge { position: relative; width: 170px; height: 170px; filter: drop-shadow(0 0 22px rgba(255, 90, 31, .35)); }
+  .gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .gauge .num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .gauge .num b { font: 600 44px/1 Inter; letter-spacing: -0.03em; }
+  .gauge .num span { font-size: 12px; color: var(--muted); }
+  .pill { display: inline-block; padding: 3px 11px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .pill.good { background: var(--good-soft); color: var(--good); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.bad { background: var(--error-soft); color: var(--error); } .pill.info { background: rgba(255, 255, 255, .06); color: var(--muted); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 12px; }
+  .tile { border: 1px solid var(--line-strong); border-radius: 14px; padding: 14px 16px; background: rgba(255, 255, 255, .03); transition: transform .2s, border-color .2s; }
+  .tile:hover { transform: translateY(-2px); border-color: rgba(255, 138, 61, .45); }
+  .tile .k { font-size: 12px; color: var(--muted); }
+  .tile .v { font: 600 21px/1.35 "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+  .tile .s { font-size: 12px; color: var(--accent-2); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-size: 11.5px; color: var(--muted); font-weight: 500; padding: 8px; border-bottom: 1px solid var(--line-strong); text-transform: uppercase; letter-spacing: .06em; }
+  td { padding: 12px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tbody tr { transition: background .2s; } tbody tr:hover { background: rgba(255, 255, 255, .025); }
+  td.num { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bar { position: relative; height: 8px; background: rgba(255, 255, 255, .06); border-radius: 999px; min-width: 130px; }
+  .bar .band { position: absolute; top: 0; bottom: 0; background: var(--band); border-radius: 999px; }
+  .bar .mark { position: absolute; top: -5px; width: 4px; height: 18px; border-radius: 3px; background: var(--accent-2); box-shadow: 0 0 10px var(--accent); transform: translateX(-2px); }
+  .sugg { position: relative; border: 1px solid var(--line-strong); border-radius: 16px; padding: 16px 18px 16px 22px; margin-bottom: 12px; background: rgba(255, 255, 255, .025); overflow: hidden; transition: border-color .2s; }
+  .sugg::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+  .sugg.high::before { background: var(--error); box-shadow: 0 0 16px var(--error); } .sugg.medium::before { background: var(--warn); } .sugg.low::before { background: var(--accent-2); }
+  .sugg:hover { border-color: rgba(255, 138, 61, .4); }
+  .sugg .head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-weight: 600; }
+  .sugg .area { font-size: 12px; color: var(--muted); font-weight: 500; margin-top: 3px; }
+  .sugg p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+  .sugg ul { margin: 10px 0 0; padding-left: 20px; font-size: 14px; } .sugg li::marker { color: var(--accent-2); }
+  .strengths { margin: 0; padding-left: 20px; } .strengths li::marker { color: var(--good); }
+  .note { font-size: 12px; color: var(--muted); margin-top: 22px; }
+  .scroll { overflow-x: auto; }
+  footer { color: var(--muted); font-size: 13px; margin-top: 12px; text-align: center; }
+  .hidden { display: none; }
+  @media (max-width: 860px) {
+    .chip { display: none; }
+    .previews { grid-template-columns: 1fr; max-width: 420px; }
+    .pcard.mid { transform: none; order: -1; }
+    .pillnav { order: 3; width: 100%; justify-content: center; }
+  }
+  @media (max-width: 640px) {
+    .summary { grid-template-columns: 1fr; justify-items: start; }
+    .panel { padding: 18px; border-radius: 18px; }
+    .hero { padding: 56px 0 40px; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    .aura, .topbar, .hero, .previews, .logos, .section-head, #input-panel, footer, .no-print { display: none !important; }
+    body { background: #fff; color: #111; } .panel { border: 0; padding: 0; background: none; box-shadow: none; backdrop-filter: none; }
+  }
+
+  /* CreditDecision additions */
+  .tabs { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+  .tabs button { border: 1px solid var(--line-strong); background: rgba(255,255,255,.04); color: var(--muted); border-radius: 999px; padding: 8px 18px; font: 500 13.5px Inter, sans-serif; cursor: pointer; }
+  .tabs button.on { background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: #fff; border-color: transparent; box-shadow: 0 4px 18px var(--glow); }
+  textarea { font: 12.5px/1.5 "JetBrains Mono", monospace; color: var(--ink); background: rgba(0,0,0,.35); border: 1px solid var(--line-strong); border-radius: 12px; padding: 12px; width: 100%; min-height: 280px; resize: vertical; }
+  textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .verdict { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 18px; }
+  .verdict .pill { font-size: 15px; padding: 6px 16px; }
+  .memo { background: rgba(255,255,255,.025); border: 1px solid var(--line-strong); border-radius: 16px; padding: 8px 24px 20px; }
+  .memo h1 { font: 600 24px/1.25 "Source Serif 4", serif; margin: 18px 0 8px; }
+  .memo h2 { font-size: 17px; margin: 26px 0 8px; color: var(--accent-2); }
+  .memo p, .memo li { color: #dcd9e2; font-size: 14px; }
+  .memo table { margin: 8px 0 4px; font-size: 13px; }
+  .memo td { padding: 7px 8px; }
+  .memo hr { border: 0; border-top: 1px solid var(--line-strong); margin: 22px 0 10px; }
+  .launch { font-size: 13px; color: var(--muted); }
+  .launch code { white-space: nowrap; }
+  @media print { #input-panel, .tabs { display: none !important; } .memo { border: 0; background: none; } .memo p, .memo li { color: #111; } }
+</style>
+</head>
+<body>
+<div class="aura" aria-hidden="true"><div class="swirl"></div></div>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="./credit.html"><span class="logo">C</span>CreditDecision</a>
+    <nav class="pillnav" aria-label="Sections">
+      <a href="#top" class="on">Home</a>
+      <a href="#workbench">Workbench</a>
+      <a href="./advisor.html">Advisor</a>
+      <a href="./">Calculators</a>
+    </nav>
+    <span class="status"><span class="dot" id="dot"></span><span id="status">Loading engine…</span></span>
+  </header>
+
+  <section class="hero" id="top">
+    <span class="chip c1">Spreading <i>◎</i></span>
+    <span class="chip c2">IRB capital <i>◈</i></span>
+    <span class="chip c3">Credit memo <i>◉</i></span>
+    <span class="chip c4">Collections <i>◇</i></span>
+    <h1>Borrower In. Decision and Memo Out.</h1>
+    <p>Wholesale credit from approval to recovery: spreading, pro forma, rating, LGD, Basel capital, RAROC, policy exceptions, approver, covenants and a 12-section credit memo, then monitoring, IFRS 9 staging and a workout plan. Every figure is computed, not generated.</p>
+    <a class="cta" href="#workbench">Open the workbench <span class="arr">→</span></a>
+  </section>
+
+  <div class="section-head" id="workbench">
+    <h2>Credit Workbench</h2>
+    <p>Pick an example or paste your own JSON. Everything runs in your browser.</p>
+  </div>
+
+  <section class="panel" id="input-panel">
+    <div class="tabs" role="tablist">
+      <button type="button" class="on" data-mode="decide" role="tab">1 · Decision and memo</button>
+      <button type="button" data-mode="monitor" role="tab">2 · Monitoring and collections</button>
+    </div>
+    <p class="blurb" id="blurb"></p>
+    <div class="examples" id="examples"></div>
+    <div class="drop" id="drop">
+      <div><p><b>Upload a JSON file</b> or edit the one below</p><small id="schema-hint"></small></div>
+      <div class="actions" style="margin:0">
+        <input type="file" id="file" accept=".json,application/json" class="hidden">
+        <button class="btn" type="button" id="pick">Choose file</button>
+      </div>
+    </div>
+    <textarea id="input" spellcheck="false" aria-label="Input JSON"></textarea>
+    <div class="actions">
+      <button class="run" type="button" id="run" disabled>Run <span aria-hidden="true">→</span></button>
+      <span class="msg" id="msg" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <section class="panel hidden" id="report" aria-live="polite"></section>
+
+  <footer>Runs the tested <code>casemath.credit</code> Python package in your browser (Pyodide). Nothing you enter leaves this page. Scorecard weights, haircuts and limits are indicative defaults, not a validated bank model.</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const MODES = {
+  decide: {
+    blurb: "A borrower file: financials (oldest first), the facility request, collateral and analyst scores. Output: decision, grade, RAROC, policy checks and the credit memo.",
+    hint: "Fields: name, industry, financials[], request{amount, tenor_years, ...}, collateral[], qualitative{}, kyc_flags[]",
+    examples: [["northwind-industrial", "Northwind · approve"], ["coastal-retail", "Coastal Retail · refer"], ["meridian-energy", "Meridian · decline"]],
+    run: "Decide",
+  },
+  monitor: {
+    blurb: "A live facility: limit, outstanding, covenants, collateral, days past due, utilisation, credit events and the latest financials. Output: signals, staging, ECL and a collections plan.",
+    hint: "Fields: borrower, industry, limit, outstanding, origination_grade, covenants{}, days_past_due, utilisation_history[], events[], financials[]",
+    examples: [["coastal-retail-q3-review", "Coastal Retail · Q3 review"], ["meridian-default", "Meridian · default"]],
+    run: "Monitor",
+  },
+};
+let mode = "decide", py = null, last = null;
+
+function setStatus(t, s) { $("status").textContent = t; $("dot").className = "dot" + (s ? " " + s : ""); }
+function msg(t, e) { $("msg").textContent = t; $("msg").className = "msg" + (e ? " error" : ""); }
+function el(tag, attrs = {}, children = []) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) { if (k === "text") n.textContent = v; else if (k === "html") n.innerHTML = v; else if (v != null) n.setAttribute(k, v); }
+  for (const c of [].concat(children)) if (c != null) n.append(c);
+  return n;
+}
+const M = x => x == null ? "n/a" : `${(x / 1e6).toLocaleString(undefined, { maximumFractionDigits: 1 })}M`;
+const X = x => x == null ? "n/a" : `${x.toFixed(2)}x`;
+const P = (x, d = 1) => x == null ? "n/a" : `${(x * 100).toFixed(d)}%`;
+function tile(k, v, s) { return el("div", { class: "tile" }, [el("div", { class: "k", text: k }), el("div", { class: "v", text: v }), s ? el("div", { class: "s", text: s }) : null]); }
+function table(head, rows) {
+  return el("div", { class: "scroll" }, [el("table", {}, [
+    el("thead", {}, [el("tr", {}, head.map(h => el("th", { text: h })))]),
+    el("tbody", {}, rows.map(r => el("tr", {}, r.map(c => c instanceof Node ? el("td", {}, [c]) : el("td", { text: c }))))),
+  ])]);
+}
+function download(name, text, type) {
+  const a = el("a", { href: URL.createObjectURL(new Blob([text], { type })), download: name });
+  document.body.append(a); a.click(); a.remove();
+}
+
+// Minimal Markdown for the memo: headings, tables, lists, bold, italics, rules, paragraphs.
+function esc(s) { return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function inline(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/(^|\s)_(.+?)_(?=\s|$)/g, "$1<i>$2</i>"); }
+function markdown(md) {
+  const lines = md.split("\n"), out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (!l.trim()) continue;
+    if (l.startsWith("# ")) out.push(`<h1>${inline(l.slice(2))}</h1>`);
+    else if (l.startsWith("## ")) out.push(`<h2>${inline(l.slice(3))}</h2>`);
+    else if (l.trim() === "---") out.push("<hr>");
+    else if (l.startsWith("|")) {
+      const rows = [];
+      while (i < lines.length && lines[i].startsWith("|")) rows.push(lines[i++]);
+      i--;
+      const cells = r => r.slice(1, -1).split(" | ").map(c => c.trim().replace(/^\|\s*|\s*\|$/g, ""));
+      const [h, , ...body] = rows;
+      out.push(`<div class="scroll"><table><thead><tr>${cells(h).map(c => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${
+        body.map(r => `<tr>${cells(r).map(c => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+    } else if (l.startsWith("- ")) {
+      const items = [];
+      while (i < lines.length && lines[i].startsWith("- ")) items.push(`<li>${inline(lines[i++].slice(2))}</li>`);
+      i--;
+      out.push(`<ul>${items.join("")}</ul>`);
+    } else out.push(`<p>${inline(l)}</p>`);
+  }
+  return out.join("\n");
+}
+
+function decisionClass(d) { return d === "Approve" ? "good" : d === "Decline" ? "bad" : "warn"; }
+
+function renderDecision(d) {
+  const g = d.rating.final, rt = d.returns, pf = d.pro_forma, name = d.borrower.name;
+  const checks = d.checks.map(c => [c.label, c.actual, c.limit,
+    el("span", { class: "pill " + (c.passed ? "good" : c.hard ? "bad" : "warn"), text: c.passed ? "pass" : c.hard ? "hard stop" : "exception" })]);
+  return [
+    el("div", { class: "verdict" }, [el("span", { class: "pill " + decisionClass(d.decision), text: d.decision }), el("h2", { text: name })]),
+    el("p", { class: "blurb", text: d.reasons.join(" · ") }),
+    el("div", { class: "tiles" }, [
+      tile("Internal grade", `${g.grade} · ${g.equivalent}`, `PD ${P(g.pd, 2)} · score ${d.rating.score.toFixed(0)}`),
+      tile("Approver", d.approver),
+      tile("Pro forma leverage", X(pf.leverage), `ceiling ${X(d.industry.max_leverage)}`),
+      tile("Pro forma DSCR", X(pf.dscr), `ICR ${X(pf.icr)}`),
+      tile("LGD / EL", `${P(d.cover.lgd)}`, `EL ${M(rt.expected_loss)} a year`),
+      tile("RAROC", P(rt.raroc), rt.required_margin == null ? null : `hurdle margin ${(rt.required_margin * 1e4).toFixed(0)} bp`),
+      tile("Fits policy", M(d.recommended_amount), `of ${M(d.borrower.request.amount)} requested`),
+    ]),
+    el("h3", { text: "Policy checks" }), table(["Check", "Actual", "Limit", "Result"], checks),
+    el("h3", { text: "Credit memo" }), el("div", { class: "memo", html: markdown(d.memo_markdown) }),
+    el("div", { class: "actions no-print" }, [
+      el("button", { class: "btn", type: "button", "data-act": "print", text: "Print / save as PDF" }),
+      el("button", { class: "btn", type: "button", "data-act": "md", text: "Download memo (.md)" }),
+      el("button", { class: "btn", type: "button", "data-act": "json", text: "Download JSON" }),
+    ]),
+  ];
+}
+
+function renderMonitoring(m) {
+  const st = m.status, g = m.current_grade;
+  const cls = { Pass: "good", "Special Mention": "warn" }[m.classification] || "bad";
+  const sev = { low: "info", medium: "warn", high: "bad", critical: "bad" };
+  return [
+    el("div", { class: "verdict" }, [el("span", { class: "pill " + cls, text: m.classification }), el("h2", { text: st.borrower }),
+      el("span", { class: "pill info", text: `strategy: ${m.strategy}` })]),
+    el("div", { class: "tiles" }, [
+      tile("Outstanding", M(st.outstanding), `of ${M(st.limit)} limit`),
+      tile("Current grade", `${g.grade} · ${g.equivalent}`, m.migration ? `${m.migration > 0 ? "+" : ""}${m.migration} notches vs origination` : "no migration"),
+      tile("IFRS 9 stage", String(m.ifrs9_stage), m.sma_bucket),
+      tile("ECL provision", M(m.ecl), `LGD ${P(m.lgd)}`),
+      tile("Recovery if enforced", M(m.recovery_value)),
+    ]),
+    el("h3", { text: "Covenants" }),
+    table(["Covenant", "Actual", "Threshold", "Headroom", "Result"], m.covenant_tests.map(t => [t.name, X(t.actual), X(t.threshold),
+      t.headroom == null ? "n/a" : `${(t.headroom * 100).toFixed(0)}%`, el("span", { class: "pill " + (t.breached ? "bad" : "good"), text: t.breached ? "breach" : "ok" })])),
+    el("h3", { text: "Early-warning signals" }),
+    m.signals.length ? table(["Severity", "Signal", "Detail"], m.signals.map(s => [el("span", { class: "pill " + sev[s.severity], text: s.severity }), s.signal, s.detail]))
+                     : el("p", { class: "blurb", text: "No signals." }),
+    el("h3", { text: "Action plan" }),
+    table(["Day", "Owner", "Action"], m.actions.map(a => [`Day ${a.day}`, a.owner, a.action])),
+    el("div", { class: "actions no-print" }, [
+      el("button", { class: "btn", type: "button", "data-act": "print", text: "Print / save as PDF" }),
+      el("button", { class: "btn", type: "button", "data-act": "json", text: "Download JSON" }),
+    ]),
+  ];
+}
+
+async function loadExample(key) {
+  try {
+    const r = await fetch(`examples/${key}.json`, { cache: "no-store" });
+    if (!r.ok) throw new Error(`examples/${key}.json not found (${r.status})`);
+    $("input").value = await r.text();
+    msg(`Loaded ${key}. Edit it if you like, then ${MODES[mode].run}.`);
+  } catch (e) { msg(e.message, true); }
+}
+
+function setMode(next) {
+  mode = next;
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.mode === mode));
+  const cfg = MODES[mode];
+  $("blurb").textContent = cfg.blurb; $("schema-hint").textContent = cfg.hint;
+  $("run").firstChild.textContent = cfg.run + " ";
+  $("examples").replaceChildren(...cfg.examples.map(([k, label]) => {
+    const b = el("button", { class: "btn", type: "button", text: label }); b.onclick = () => loadExample(k); return b;
+  }));
+  $("report").classList.add("hidden"); msg("");
+  loadExample(cfg.examples[0][0]);
+}
+
+function run() {
+  if (!py) return;
+  const text = $("input").value;
+  try { JSON.parse(text); } catch (e) { msg("That is not valid JSON: " + e.message, true); return; }
+  const res = JSON.parse(py[mode](text));
+  if (!res.ok) { msg(res.error, true); return; }
+  last = res.result; msg("");
+  const report = $("report");
+  report.replaceChildren(...(mode === "decide" ? renderDecision(last) : renderMonitoring(last)));
+  report.classList.remove("hidden");
+  const name = (last.borrower?.name || last.status?.borrower || "credit").replace(/\W+/g, "-");
+  report.querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
+    const a = b.dataset.act;
+    if (a === "print") window.print();
+    if (a === "md") download(`${name}-credit-memo.md`, last.memo_markdown, "text/markdown");
+    if (a === "json") download(`${name}-${mode}.json`, JSON.stringify(last, null, 2), "application/json");
+  });
+  report.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+const GLUE = `
+import json
+from casemath.core.errors import CaseMathError
+from casemath.credit import borrower_from_dict, decide, monitor, render_memo, status_from_dict
+
+def _run(fn):
+    try:
+        return json.dumps({"ok": True, "result": fn()}, allow_nan=False)
+    except (CaseMathError, ValueError, TypeError) as exc:
+        return json.dumps({"ok": False, "error": str(exc)})
+
+def decide_json(text):
+    def go():
+        d = decide(borrower_from_dict(json.loads(text)))
+        out = d.to_dict()
+        out["memo_markdown"] = render_memo(d)
+        return out
+    return _run(go)
+
+def monitor_json(text):
+    return _run(lambda: monitor(status_from_dict(json.loads(text))).to_dict())
+
+{"decide": decide_json, "monitor": monitor_json}
+`;
+
+async function boot() {
+  try {
+    const manifest = await (await fetch("manifest.json", { cache: "no-store" })).json();
+    const pyodide = await loadPyodide();
+    await pyodide.loadPackage("micropip");
+    await pyodide.pyimport("micropip").install(new URL(manifest.wheel, location.href).href);
+    py = pyodide.runPython(GLUE).toJs({ dict_converter: Object.fromEntries });
+    $("run").disabled = false;
+    setStatus(`casemath ${manifest.version} ready`, "ready");
+  } catch (err) {
+    console.error(err);
+    setStatus("Failed to load engine", "fail");
+    msg("Could not load the Python runtime: " + err.message, true);
+  }
+}
+
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+$("run").onclick = run;
+$("pick").onclick = () => $("file").click();
+$("file").onchange = async e => { const f = e.target.files[0]; if (f) { $("input").value = await f.text(); msg(`Loaded ${f.name}.`); } e.target.value = ""; };
+const drop = $("drop");
+for (const ev of ["dragenter", "dragover"]) drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); });
+for (const ev of ["dragleave", "drop"]) drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); });
+drop.addEventListener("drop", async e => { const f = e.dataTransfer.files[0]; if (f) { $("input").value = await f.text(); msg(`Loaded ${f.name}.`); } });
+setMode("decide");
+boot();
+</script>
+</body>
+</html>

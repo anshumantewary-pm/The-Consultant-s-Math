@@ -140,7 +140,17 @@ Overrides only ever notch **down**: EBITDA down more than 15% (−1), negative e
 | Strategy | monitor → watchlist → remediate (waiver and reset, priced) → restructure (special assets, IBR, standstill, amend and extend) → recover (acceleration, enforcement, NPL sale vs enforce, write-off) |
 | Action plan | Dated playbook per strategy with owner (RM, credit officer, special assets, legal, valuer, finance) |
 
-## 5. Interfaces
+## 5. Interfaces and how to launch
+
+| Surface | Launch | Link |
+|---|---|---|
+| Web workbench (hosted) | Merge to `main`; Pages deploys automatically (enable once: Settings → Pages → Source: GitHub Actions) | `https://anshumantewary-pm.github.io/The-Consultant-s-Math/credit.html` |
+| Web workbench (local) | `scripts/build_site.sh --serve` | http://localhost:8000/credit.html |
+| CLI | `pip install -e ".[dev]"`, then the commands below | terminal |
+| Python library | `from casemath.credit import ...` | notebook / service |
+
+The web workbench (`web/credit.html`) installs the same wheel CI tested into Pyodide and calls `decide()` / `monitor()` in the browser. Example files are published next to it under `examples/`.
+
 
 ```bash
 casemath industries                                     # industries and leverage ceilings

@@ -27,17 +27,8 @@ jobs:
       - run: pip install -e ".[dev]"
       - name: Test before deploying
         run: pytest -q
-      - name: Build wheel
-        run: python -m build --wheel
-      - name: Assemble site
-        run: |
-          mkdir -p site
-          cp web/*.html site/
-          cp dist/*.whl site/
-          wheel=$(basename dist/*.whl)
-          version=$(python -c "import casemath; print(casemath.__version__)")
-          printf '{"wheel": "%s", "version": "%s"}\n' "$wheel" "$version" > site/manifest.json
-          ls -la site
+      - name: Build wheel and assemble site
+        run: scripts/build_site.sh
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

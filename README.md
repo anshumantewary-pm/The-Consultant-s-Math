@@ -23,6 +23,25 @@ cd The-Consultant-s-Math
 pip install -e ".[dev]"     # or: pip install .   (no dev tools)
 ```
 
+## How to launch
+
+| What | How | Link |
+|---|---|---|
+| **Web app, hosted** | Live after this branch is merged to `main` (the Pages workflow deploys on every push to `main`) | Home: `https://anshumantewary-pm.github.io/The-Consultant-s-Math/` · CreditDecision: `…/credit.html` · Advisor: `…/advisor.html` |
+| **Web app, local preview** | `scripts/build_site.sh --serve` (builds the wheel and site exactly like CI) | http://localhost:8000/credit.html |
+| **Local calculators UI** | `casemath serve --open` | http://127.0.0.1:8765 |
+| **Command line** | `casemath credit examples/credit/northwind-industrial.json --memo memo.md` | memo written to `memo.md` |
+
+First-time setup for any of these:
+
+```bash
+git clone https://github.com/anshumantewary-pm/The-Consultant-s-Math.git
+cd The-Consultant-s-Math
+pip install -e ".[dev]"
+```
+
+GitHub Pages must be switched on once per repository: **Settings → Pages → Source: GitHub Actions**. After that, each push to `main` runs [`pages.yml`](.github/workflows/pages.yml) and the run's summary shows the live URL. The web pages need internet access to load Pyodide from the jsDelivr CDN; the numbers are computed in the browser and nothing is uploaded.
+
 ## What's inside
 
 | Area | Functions | CLI |
@@ -130,6 +149,8 @@ casemath collect examples/credit/meridian-default.json                 # Doubtfu
 
 `decide()` spreads the financials, restates them pro forma for the new facility, rates the borrower on an 11-factor scorecard (10-grade master scale with PD), works out EAD, collateral LGD, Basel IRB capital and RAROC, runs hard-stop and exception checks from `BankPolicy`, and returns the decision, approver, covenants with headroom, the amount and margin that fit policy, conditions, risks and the early-warning triggers. `render_memo()` writes a 12-section credit memo from that object, so the memo cannot disagree with the decision ([sample](docs/credit/sample-memo-northwind.md)). `monitor()` tests covenants, raises early-warning signals, re-rates, classifies (US Pass to Loss, IFRS 9 stage, RBI SMA/NPA), computes ECL and picks a strategy from watchlist to recovery with a dated action plan.
 
+**In the browser:** `credit.html` on the Pages site (or `scripts/build_site.sh --serve`, then http://localhost:8000/credit.html). It has a Decision tab (borrower JSON → decision, policy checks and the rendered memo, downloadable as Markdown or PDF) and a Collections tab, with one-click examples.
+
 Architecture: [docs/credit/ARCHITECTURE.md](docs/credit/ARCHITECTURE.md). Competitor feature map: [docs/credit/COMPETITORS.md](docs/credit/COMPETITORS.md). Feature tracker: [docs/credit/feature-tracker.csv](docs/credit/feature-tracker.csv). Scorecard weights, haircuts and limits are indicative defaults, not a validated bank model.
 
 ## Library use
@@ -206,7 +227,9 @@ src/casemath/
 ├── drill.py       random practice questions with checked answers
 ├── web/           api (JSON over the CLI), server (http.server), index.html
 └── cli.py         argparse front end
-web/               GitHub Pages app that runs the package in the browser (Pyodide)
+web/               GitHub Pages app (index, advisor, credit) that runs the package in the browser (Pyodide)
+scripts/           build_site.sh: build the Pages site locally or in CI
+examples/credit/   sample borrower and facility files for CreditDecision
 tests/             one test module per area plus an import-layering check, 583 tests
 docs/              PRD, architecture, frameworks guide, case write-ups
 ```
