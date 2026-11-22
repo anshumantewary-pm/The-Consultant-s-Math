@@ -15,6 +15,17 @@ Break-even revenue $250,000.00
 Margin of safety   37.5%
 ```
 
+## Launch
+
+| What | Link / command |
+|---|---|
+| Calculators, analysis and the six cases (browser, no install) | **https://anshumantewary-pm.github.io/The-Consultant-s-Math/** |
+| Business Advisor (upload a CSV, get a diagnosis) | **https://anshumantewary-pm.github.io/The-Consultant-s-Math/advisor.html** |
+| Local web UI | `casemath serve --open` (opens http://127.0.0.1:8765; `--port 0` picks a free port) |
+| CLI | `casemath --help` |
+
+The browser apps run the Python package itself through Pyodide. The first visit takes 10-20 seconds while Pyodide downloads; after that it is cached. If a page looks stale after a deploy, hard-refresh (Ctrl/Cmd + Shift + R). Every push to `main` redeploys both pages; the run shows under Actions → *Deploy web app*.
+
 ## Install
 
 ```bash
@@ -186,14 +197,15 @@ src/casemath/
 │                  montecarlo, models (built-in models for the CLI)
 ├── cases/         base, case_01 … case_06
 ├── drill.py       random practice questions with checked answers
+├── advisor.py     Business Advisor: sector benchmarks, score, suggestions
 ├── web/           api (JSON over the CLI), server (http.server), index.html
 └── cli.py         argparse front end
-web/               GitHub Pages app that runs the package in the browser (Pyodide)
-tests/             one test module per area plus an import-layering check, 498 tests
+web/               GitHub Pages apps (index.html, advisor.html) running the package in Pyodide
+tests/             one test module per area plus an import-layering check, 521 tests
 docs/              PRD, architecture, frameworks guide, case write-ups
 ```
 
-Layers only import downward (core ← calculators / frameworks ← analysis ← cases / drill ← cli ← web), and a test enforces it. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Requirements: [docs/PRD.md](docs/PRD.md).
+Layers only import downward (core ← calculators / frameworks ← analysis ← cases / drill / advisor ← cli ← web), and a test enforces it. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Requirements: [docs/PRD.md](docs/PRD.md).
 
 ## Development
 

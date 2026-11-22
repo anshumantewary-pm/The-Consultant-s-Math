@@ -6,8 +6,8 @@ casemath is a layered library with a thin CLI on top. Each layer only imports fr
             ┌──────────────────────────────────────────────────────┐
   Browser   │  src/casemath/web/  local UI: POST /api/<command>     │
             │    api.call → cli parser + handler                    │
-            │  web/ (repo root)   GitHub Pages app: Pyodide runs    │
-            │    cli.main() in the browser                          │
+            │  web/ (repo root)   GitHub Pages apps: Pyodide runs   │
+            │    cli.main() in the browser (index · advisor.html)   │
             └──────────────────────────┬───────────────────────────┘
                                        │
             ┌──────────────────────────▼───────────────────────────┐
@@ -18,6 +18,7 @@ casemath is a layered library with a thin CLI on top. Each layer only imports fr
   Use cases │  cases/  1 profitability · 2 entry · 3 pricing ·      │
             │          4 M&A synergy · 5 SaaS pricing · 6 investment│
             │  drill.py  random questions, checked answers          │
+            │  advisor.py  sector benchmarks, score, suggestions    │
             └───────┬──────────────────────┬───────────────┬───────┘
                     │                      │               │
             ┌───────▼──────────────────────┴──┐            │
@@ -52,6 +53,7 @@ casemath is a layered library with a thin CLI on top. Each layer only imports fr
 | Analysis | `casemath.analysis` | Model-agnostic tools: sensitivity (one-way, tornado, two-way), goal seek, scenarios, Monte Carlo. Only `models.py` (the CLI's built-in models) imports calculators | core (+ calculators in `models.py`) |
 | Cases | `casemath.cases` | Practice cases: data + a `solve()` that chains calculators and analysis | analysis, calculators, frameworks, core |
 | Drill | `casemath.drill` | Seeded question generators whose answer key comes from the calculators; `run_drill` takes `ask`/`say` callables | calculators, core |
+| Advisor | `casemath.advisor` | Business Advisor: 10 sector benchmark sets, `parse_financials` (metric,value CSV), `assess` returns a 0-100 score, valuation range, break-even, runway, unit economics and prioritised suggestions | calculators, core |
 | Interface | `casemath.cli` | Parse arguments, call the library, print text or JSON | everything |
 | Web | `casemath.web` | Turn a JSON body into CLI arguments, run the CLI handler, serve the page | cli, drill |
 
@@ -71,6 +73,23 @@ simulate(profit, {**base, "units": Triangular(800, 1000, 1100)})
 ```
 
 So every calculator gets sensitivity, goal seek and simulation for free with a one-line wrapper, and the tools compose: Case 4 goal-seeks on a model whose output is itself a simulated probability.
+
+## Deployment and launch
+
+```
+push to main ──► ci.yml     lint · mypy · tests (3 OS × 4 Pythons) · cases · wheel smoke test
+             └─► pages.yml  test ─► build wheel ─► copy web/ + wheel ─► deploy GitHub Pages
+tag vX.Y.Z  ───► release.yml  tag == package version ─► checks ─► GitHub Release with sdist + wheel
+```
+
+| Surface | Where it runs | How to launch |
+|---|---|---|
+| Calculators web app | Browser (Pyodide loads the CI-built wheel) | https://anshumantewary-pm.github.io/The-Consultant-s-Math/ |
+| Business Advisor | Browser (Pyodide) | https://anshumantewary-pm.github.io/The-Consultant-s-Math/advisor.html |
+| Local web UI | `http.server` on 127.0.0.1 | `casemath serve --open` |
+| CLI / library | Python 3.10+ | `pip install -e .` then `casemath --help` |
+
+The Pages apps have no backend: the first load downloads Pyodide (about 10 MB, then cached), installs the wheel and calls `cli.main()` in the page, so nothing a user types or uploads leaves the browser.
 
 ## Design rules
 
